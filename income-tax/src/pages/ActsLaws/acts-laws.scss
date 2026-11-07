@@ -1,0 +1,337 @@
+
+/* ==========================================
+   ACTS & LAWS — MODERN PAGE DESIGN
+========================================== */
+
+.acts-laws-page {
+  --law-accent: #35b8c2;
+  --law-accent-light: #c8f1f2;
+  --law-text: var(--text-primary);
+  --law-muted: var(--text-secondary);
+
+  min-height: 100vh;
+  padding-bottom: 80px;
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      ellipse at 5% 10%,
+      rgba(113, 201, 206, 0.16),
+      transparent 38%
+    ),
+    radial-gradient(
+      ellipse at 95% 55%,
+      rgba(166, 227, 233, 0.18),
+      transparent 35%
+    ),
+    var(--bg-primary);
+
+  /* ======================================
+     CONTENT SECTION
+  ====================================== */
+
+  .content-section {
+    padding: clamp(65px, 8vw, 105px) 0 70px;
+  }
+
+  .container {
+    width: min(1320px, calc(100% - 64px));
+    margin: 0 auto;
+  }
+
+  /* ======================================
+     SECTION HEADER
+  ====================================== */
+
+  .section-header {
+    max-width: 680px;
+    margin-bottom: 48px;
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+
+      padding: 8px 14px;
+      margin-bottom: 17px;
+
+      color: #168b96;
+      background: rgba(113, 201, 206, 0.13);
+      border: 1px solid rgba(53, 184, 194, 0.2);
+      border-radius: 50px;
+
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+
+      &::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        background: var(--law-accent);
+        border-radius: 50%;
+        box-shadow: 0 0 10px rgba(53, 184, 194, 0.5);
+      }
+    }
+
+    h2 {
+      margin: 0 0 13px;
+      color: var(--law-text);
+
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1.5px;
+    }
+
+    p {
+      max-width: 540px;
+      margin: 0;
+
+      color: var(--law-muted);
+      font-size: 1.05rem;
+      line-height: 1.8;
+    }
+  }
+
+  /* ======================================
+     LAW CARDS GRID
+  ====================================== */
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+    align-items: stretch;
+  }
+
+  /* ======================================
+     INDIVIDUAL CARD
+  ====================================== */
+
+  .card-grid > * {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+
+    min-width: 0;
+    min-height: 280px;
+    padding: 32px;
+
+    overflow: hidden;
+
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 22px;
+
+    box-shadow:
+      0 4px 12px rgba(20, 80, 90, 0.025),
+      0 15px 40px rgba(20, 80, 90, 0.045);
+
+    transition:
+      transform 0.35s ease,
+      border-color 0.35s ease,
+      box-shadow 0.35s ease;
+
+    /* Top accent line */
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 4px;
+
+      background: linear-gradient(
+        90deg,
+        #35b8c2,
+        #71c9ce,
+        #a6e3e9
+      );
+
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
+    }
+
+    /* Soft decorative circle */
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: -75px;
+      right: -75px;
+
+      width: 180px;
+      height: 180px;
+
+      background: rgba(113, 201, 206, 0.09);
+      border-radius: 50%;
+
+      pointer-events: none;
+      transition: transform 0.4s ease;
+    }
+
+    &:hover {
+      transform: translateY(-9px);
+
+      border-color: rgba(53, 184, 194, 0.55);
+
+      box-shadow:
+        0 12px 25px rgba(20, 80, 90, 0.06),
+        0 25px 55px rgba(20, 80, 90, 0.09);
+
+      &::before {
+        transform: scaleX(1);
+      }
+
+      &::after {
+        transform: scale(1.35);
+      }
+    }
+
+    /* Badge */
+
+    span {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Card title */
+
+    h3 {
+      position: relative;
+      z-index: 1;
+
+      margin: 22px 0 14px;
+
+      color: var(--law-text);
+      font-size: 1.3rem;
+      font-weight: 750;
+      line-height: 1.4;
+      letter-spacing: -0.4px;
+    }
+
+    /* Description */
+
+    p {
+      position: relative;
+      z-index: 1;
+
+      margin: 0 0 22px;
+
+      color: var(--law-muted);
+      font-size: 0.96rem;
+      line-height: 1.8;
+    }
+
+    /* Explore link */
+
+    a {
+      position: relative;
+      z-index: 1;
+
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+
+      width: fit-content;
+      margin-top: auto;
+
+      color: var(--law-accent);
+      font-size: 0.95rem;
+      font-weight: 750;
+      text-decoration: none;
+
+      transition: gap 0.25s ease, color 0.25s ease;
+
+      &:hover {
+        gap: 15px;
+        color: #168b96;
+      }
+    }
+  }
+}
+
+/* ==========================================
+   TABLET RESPONSIVE
+========================================== */
+
+@media (max-width: 1024px) {
+  .acts-laws-page {
+    .container {
+      width: calc(100% - 48px);
+    }
+
+    .card-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px;
+    }
+
+    .card-grid > * {
+      padding: 27px;
+    }
+  }
+}
+
+/* ==========================================
+   MOBILE RESPONSIVE
+========================================== */
+
+@media (max-width: 640px) {
+  .acts-laws-page {
+    padding-bottom: 40px;
+
+    .content-section {
+      padding: 45px 0;
+    }
+
+    .container {
+      width: calc(100% - 36px);
+    }
+
+    .section-header {
+      margin-bottom: 30px;
+
+      h2 {
+        font-size: 2rem;
+        letter-spacing: -0.8px;
+      }
+
+      p {
+        font-size: 0.94rem;
+      }
+    }
+
+    .card-grid {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .card-grid > * {
+      min-height: 245px;
+      padding: 25px;
+      border-radius: 18px;
+
+      h3 {
+        font-size: 1.18rem;
+      }
+    }
+  }
+}
+
+/* ==========================================
+   ACCESSIBILITY
+========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .acts-laws-page,
+  .acts-laws-page * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+
+  .acts-laws-page .card-grid > *:hover {
+    transform: none;
+  }
+}

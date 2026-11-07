@@ -1,0 +1,587 @@
+
+.advance-tax-page {
+  min-height: 100vh;
+  padding: 24px 0 64px;
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 8% 5%, rgba(113, 201, 206, 0.13), transparent 28%),
+    var(--bg-primary);
+}
+
+.advance-tax-container {
+  width: min(1440px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+// Back button
+
+.advance-back-wrapper {
+  margin: 20px 0;
+}
+
+.advance-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 17px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+
+  span {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  &:hover {
+    color: var(--color-primary);
+    border-color: var(--color-accent);
+    transform: translateX(-3px);
+  }
+}
+
+// Header
+
+.advance-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  overflow: hidden;
+  padding: 38px;
+  margin-bottom: 28px;
+  border: 1px solid rgba(113, 201, 206, 0.3);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 90% 10%, rgba(113, 201, 206, 0.22), transparent 32%),
+    linear-gradient(125deg, var(--bg-secondary), var(--bg-primary));
+  box-shadow: 0 12px 35px rgba(20, 70, 80, 0.06);
+}
+
+.advance-header-content {
+  position: relative;
+  z-index: 1;
+
+  h1 {
+    margin: 15px 0 10px;
+    font-size: clamp(28px, 4vw, 42px);
+    line-height: 1.15;
+    letter-spacing: -1.4px;
+    font-weight: 800;
+  }
+
+  p {
+    max-width: 620px;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+}
+
+.advance-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.7px;
+}
+
+.advance-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 4px rgba(113, 201, 206, 0.17);
+}
+
+.advance-header-badge {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  min-width: 225px;
+  padding: 22px 25px;
+  border: 1px solid rgba(113, 201, 206, 0.4);
+  border-radius: 18px;
+  background: rgba(113, 201, 206, 0.12);
+
+  span {
+    display: block;
+    margin-bottom: 9px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  strong {
+    display: block;
+    color: var(--color-primary);
+    font-size: clamp(24px, 3vw, 32px);
+    font-weight: 800;
+    letter-spacing: -0.8px;
+    overflow-wrap: anywhere;
+  }
+}
+
+// Main layout
+
+.advance-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 355px;
+  align-items: start;
+  gap: 25px;
+}
+
+.advance-left-stack {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+
+// Form cards
+
+.advance-card {
+  min-width: 0;
+  padding: 27px;
+  border: 1px solid var(--border-color);
+  border-radius: 19px;
+  background: var(--bg-secondary);
+  box-shadow: 0 8px 25px rgba(20, 70, 80, 0.045);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: rgba(113, 201, 206, 0.55);
+    box-shadow: 0 12px 30px rgba(20, 70, 80, 0.07);
+  }
+}
+
+.advance-section-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 25px;
+
+  h2 {
+    margin: 0 0 6px;
+    color: var(--text-primary);
+    font-size: 19px;
+    font-weight: 750;
+    letter-spacing: -0.3px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+}
+
+.advance-section-number {
+  display: grid;
+  flex-shrink: 0;
+  width: 39px;
+  height: 39px;
+  place-items: center;
+  border: 1px solid rgba(113, 201, 206, 0.45);
+  border-radius: 12px;
+  background: rgba(113, 201, 206, 0.13);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+// Form grid
+
+.advance-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 19px;
+
+  &.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.advance-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 8px;
+
+  label {
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.4;
+  }
+
+  input,
+  select {
+    width: 100%;
+    min-width: 0;
+    height: 47px;
+    padding: 0 13px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    outline: none;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      background 0.2s ease;
+
+    &::placeholder {
+      color: var(--text-secondary);
+      opacity: 0.7;
+    }
+
+    &:hover {
+      border-color: var(--color-accent);
+    }
+
+    &:focus {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 3px rgba(113, 201, 206, 0.17);
+    }
+  }
+
+  input[type="number"] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  select {
+    cursor: pointer;
+  }
+}
+
+// Result panel
+
+.advance-result-panel {
+  position: sticky;
+  top: 95px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: var(--bg-secondary);
+  box-shadow: 0 12px 35px rgba(20, 70, 80, 0.07);
+}
+
+.advance-result-head {
+  padding: 29px 25px;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(255, 255, 255, 0.16), transparent 35%),
+    linear-gradient(135deg, #137d9a, #168fa1);
+  color: #fff;
+
+  h2 {
+    margin: 13px 0 7px;
+    font-size: clamp(27px, 3vw, 35px);
+    line-height: 1.2;
+    font-weight: 850;
+    letter-spacing: -1px;
+    overflow-wrap: anywhere;
+  }
+
+  p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+  }
+}
+
+.advance-result-label {
+  display: inline-block;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+}
+
+.advance-result-list {
+  padding: 10px 22px 0;
+}
+
+.advance-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border-color);
+
+  span {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  strong {
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 750;
+    text-align: right;
+  }
+
+  &.final {
+    align-items: flex-start;
+    margin-top: 5px;
+    padding: 17px 13px;
+    border: 1px solid rgba(113, 201, 206, 0.4);
+    border-radius: 12px;
+    background: rgba(113, 201, 206, 0.1);
+
+    span {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    strong {
+      color: var(--color-primary);
+      font-size: 15px;
+    }
+  }
+}
+
+// Advance tax schedule
+
+.advance-schedule-wrap {
+  padding: 23px 22px 20px;
+}
+
+.advance-schedule-title {
+  margin-bottom: 16px;
+
+  h3 {
+    margin: 0 0 6px;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 750;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+}
+
+.advance-schedule-list {
+  display: grid;
+  gap: 10px;
+}
+
+.advance-schedule-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-primary);
+
+  span {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 550;
+  }
+
+  strong {
+    color: var(--color-primary);
+    font-size: 12px;
+    font-weight: 800;
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
+.advance-info-box {
+  padding: 16px;
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-primary);
+
+  strong {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--text-primary);
+    font-size: 13px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+}
+
+.advance-result-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0 22px 22px;
+  padding: 13px;
+  border-radius: 11px;
+  background: rgba(113, 201, 206, 0.1);
+
+  span {
+    color: var(--color-primary);
+    font-size: 16px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1.6;
+  }
+}
+
+// Responsive design
+
+@media (max-width: 1100px) {
+  .advance-layout {
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 18px;
+  }
+
+  .advance-card {
+    padding: 22px;
+  }
+
+  .advance-header {
+    padding: 30px;
+  }
+}
+
+@media (max-width: 850px) {
+  .advance-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .advance-result-panel {
+    position: static;
+  }
+
+  .advance-result-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 18px;
+  }
+
+  .advance-result-item.final {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .advance-tax-page {
+    padding-top: 14px;
+  }
+
+  .advance-tax-container {
+    width: min(100% - 28px, 1440px);
+  }
+
+  .advance-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 22px;
+    padding: 24px 20px;
+    border-radius: 17px;
+  }
+
+  .advance-header-content h1 {
+    font-size: 29px;
+  }
+
+  .advance-header-badge {
+    min-width: 0;
+    padding: 17px 19px;
+
+    strong {
+      font-size: 27px;
+    }
+  }
+
+  .advance-card {
+    padding: 20px 16px;
+    border-radius: 15px;
+  }
+
+  .advance-section-title {
+    gap: 11px;
+    margin-bottom: 20px;
+
+    h2 {
+      font-size: 17px;
+    }
+
+    p {
+      font-size: 12px;
+    }
+  }
+
+  .advance-section-number {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .advance-form-grid,
+  .advance-form-grid.three {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .advance-result-list {
+    grid-template-columns: 1fr;
+  }
+
+  .advance-result-item.final {
+    grid-column: auto;
+  }
+
+  .advance-result-head {
+    padding: 24px 20px;
+  }
+
+  .advance-schedule-wrap {
+    padding: 20px 16px;
+  }
+
+  .advance-result-note {
+    margin: 0 16px 17px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .advance-tax-page *,
+  .advance-tax-page *::before,
+  .advance-tax-page *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

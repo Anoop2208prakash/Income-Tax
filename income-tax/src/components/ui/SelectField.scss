@@ -1,0 +1,106 @@
+
+.select-field {
+  width: 100%;
+
+  // Label
+  .MuiInputLabel-root {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+
+    &.Mui-focused {
+      color: var(--color-primary);
+    }
+  }
+
+  // Select input
+  .MuiOutlinedInput-root {
+    color: var(--text-primary);
+    background-color: var(--bg-card);
+    border-radius: 9px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+
+    fieldset {
+      border: 1px solid var(--border-color);
+    }
+
+    &:hover fieldset {
+      border-color: var(--color-primary);
+    }
+
+    &.Mui-focused fieldset {
+      border-color: var(--color-primary);
+      border-width: 1.5px;
+    }
+
+    &.Mui-disabled {
+      background-color: var(--bg-secondary);
+      opacity: 0.7;
+    }
+  }
+
+  // Selected value
+  .MuiSelect-select {
+    padding: 11px 14px;
+    color: var(--text-primary);
+  }
+
+  // Dropdown arrow
+  .MuiSelect-icon {
+    color: var(--text-secondary);
+  }
+
+  .Mui-focused .MuiSelect-icon {
+    color: var(--color-primary);
+  }
+}
+
+// Dropdown menu
+.select-field-menu {
+  margin-top: 5px !important;
+
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+
+  border: 1px solid var(--border-color);
+  border-radius: 10px !important;
+
+  box-shadow: var(--navbar-shadow) !important;
+  overflow: hidden;
+
+  // Dropdown list
+  .MuiList-root {
+    background-color: var(--bg-card) !important;
+    padding: 5px 0;
+  }
+
+  // Dropdown options
+  .MuiMenuItem-root {
+    min-height: 40px;
+    margin: 3px 5px;
+    padding: 9px 14px;
+
+    color: var(--text-primary) !important;
+    background-color: transparent !important;
+
+    font-size: 14px;
+    border-radius: 6px;
+
+    // Hover
+    &:hover {
+      background-color: var(--nav-hover) !important;
+    }
+
+    // Selected option
+    &.Mui-selected {
+      background-color: var(--bg-secondary) !important;
+      color: var(--text-primary) !important;
+      font-weight: 600;
+
+      &:hover {
+        background-color: var(--nav-hover) !important;
+      }
+    }
+  }
+}
