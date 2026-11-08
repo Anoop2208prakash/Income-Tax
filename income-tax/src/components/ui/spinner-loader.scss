@@ -1,0 +1,34 @@
+
+.spinner-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  color: var(--text-primary);
+
+  .spinner-loader-progress {
+    color: var(--color-primary);
+  }
+
+  p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  &.spinner-loader-fullscreen {
+    min-height: 100vh;
+    width: 100%;
+  }
+
+  &.spinner-loader-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: var(--bg-primary);
+    opacity: 0.96;
+  }
+}

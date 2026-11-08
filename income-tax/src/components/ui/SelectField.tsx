@@ -1,7 +1,6 @@
 
 import {
   FormControl,
-  InputLabel,
   MenuItem,
   Select,
 } from "@mui/material";
@@ -39,43 +38,41 @@ export default function SelectField({
   };
 
   return (
-    <FormControl
-      className="select-field"
-      fullWidth={fullWidth}
-      size="small"
-      disabled={disabled}
-    >
-      <InputLabel id={`${id}-label`}>{label}</InputLabel>
+    <div className="select-field-wrapper">
+      <label
+        htmlFor={id}
+        className="select-field-label"
+      >
+        {label}
+      </label>
 
-      
-<Select
-  labelId={`${id}-label`}
-  id={id}
-  value={value}
-  label={label}
-  onChange={handleChange}
-  MenuProps={{
-    slotProps: {
-      paper: {
-        className: "select-field-menu",
-        sx: {
-          backgroundColor: "var(--bg-card)",
-          color: "var(--text-primary)",
-          border: "1px solid var(--border-color)",
-          borderRadius: "10px",
-          boxShadow: "var(--navbar-shadow)",
-        },
-      },
-    },
-  }}
->
-  {options.map((option) => (
-    <MenuItem key={option.value} value={option.value}>
-      {option.label}
-    </MenuItem>
-  ))}
-</Select>
-
-    </FormControl>
+      <FormControl
+        className="select-field"
+        fullWidth={fullWidth}
+        disabled={disabled}
+        variant="outlined"
+      >
+        <Select
+          id={id}
+          value={value}
+          onChange={handleChange}
+          displayEmpty
+          MenuProps={{
+            PaperProps: {
+              className: "select-field-menu",
+            },
+          }}
+        >
+          {options.map((option) => (
+            <MenuItem
+              key={option.value}
+              value={option.value}
+            >
+              {option.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </div>
   );
 }

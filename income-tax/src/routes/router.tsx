@@ -10,6 +10,7 @@ import AboutPage from "../pages/About/about";
 import ActsLawsPage from "../pages/ActsLaws/acts-laws";
 import TaxCalculatorPage from "../pages/TaxCalculator/TaxCalculatorPage";
 import AdvanceTaxCalculator from "../pages/TaxCalculator/AdvanceTaxCalculator";
+import HRA_Calculator from "../pages/TaxCalculator/HRA_Calculator";
 
 // Centralized route paths
 export const ROUTES = {
@@ -18,12 +19,14 @@ export const ROUTES = {
   ACTS_LAWS: "/acts-laws",
   TAX_CALCULATOR: "/tax-calculator",
   ADVANCE_TAX_CALCULATOR: "/tax-calculator/AdvanceTaxCalculator",
+  HRA_CALCULATOR: "/HRA_Calculator",
+  HRA_CALCULATOR_NESTED: "/tax-calculator/HRA_Calculator",
 } as const;
 
 // Application Router
 export const router = createBrowserRouter([
   {
-    path: ROUTES.HOME,
+    path: "/",
     element: <MainLayout />,
     children: [
       {
@@ -31,20 +34,28 @@ export const router = createBrowserRouter([
         element: <HomePage />,
       },
       {
-        path: ROUTES.ABOUT.slice(1),
+        path: "about",
         element: <AboutPage />,
       },
       {
-        path: ROUTES.ACTS_LAWS.slice(1),
+        path: "acts-laws",
         element: <ActsLawsPage />,
       },
       {
-        path: ROUTES.TAX_CALCULATOR.slice(1),
+        path: "tax-calculator",
         element: <TaxCalculatorPage />,
       },
       {
-        path: ROUTES.ADVANCE_TAX_CALCULATOR.slice(1),
+        path: "tax-calculator/AdvanceTaxCalculator",
         element: <AdvanceTaxCalculator />,
+      },
+      {
+        path: "tax-calculator/HRA_Calculator",
+        element: <HRA_Calculator />,
+      },
+      {
+        path: "HRA_Calculator",
+        element: <HRA_Calculator />,
       },
     ],
   },

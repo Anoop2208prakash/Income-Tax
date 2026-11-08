@@ -4,8 +4,13 @@
   padding: 24px 0 64px;
   color: var(--text-primary);
   background:
-    radial-gradient(circle at 8% 5%, rgba(113, 201, 206, 0.13), transparent 28%),
+    radial-gradient(
+      circle at 8% 5%,
+      rgba(113, 201, 206, 0.13),
+      transparent 28%
+    ),
     var(--bg-primary);
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 .advance-tax-container {
@@ -13,7 +18,7 @@
   margin: 0 auto;
 }
 
-// Back button
+/* BACK BUTTON */
 
 .advance-back-wrapper {
   margin: 20px 0;
@@ -32,21 +37,37 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: all 0.2s ease;
 
   span {
     font-size: 20px;
     line-height: 1;
   }
 
-  &:hover {
-    color: var(--color-primary);
-    border-color: var(--color-accent);
+  &:hover:not(:disabled) {
+    color: var(--text-primary);
+    border-color: var(--color-primary);
+    background: var(--nav-hover);
     transform: translateX(-3px);
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(113, 201, 206, 0.3);
+    outline-offset: 3px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+    transform: none;
   }
 }
 
-// Header
+.advance-button-spinner {
+  color: currentColor !important;
+}
+
+/* HEADER */
 
 .advance-header {
   position: relative;
@@ -57,12 +78,16 @@
   overflow: hidden;
   padding: 38px;
   margin-bottom: 28px;
-  border: 1px solid rgba(113, 201, 206, 0.3);
+  border: 1px solid var(--border-color);
   border-radius: 24px;
   background:
-    radial-gradient(circle at 90% 10%, rgba(113, 201, 206, 0.22), transparent 32%),
-    linear-gradient(125deg, var(--bg-secondary), var(--bg-primary));
-  box-shadow: 0 12px 35px rgba(20, 70, 80, 0.06);
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(113, 201, 206, 0.22),
+      transparent 32%
+    ),
+    var(--navbar-gradient);
+  box-shadow: var(--navbar-shadow);
 }
 
 .advance-header-content {
@@ -71,6 +96,7 @@
 
   h1 {
     margin: 15px 0 10px;
+    color: var(--text-primary);
     font-size: clamp(28px, 4vw, 42px);
     line-height: 1.15;
     letter-spacing: -1.4px;
@@ -100,7 +126,7 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--color-primary);
   box-shadow: 0 0 0 4px rgba(113, 201, 206, 0.17);
 }
 
@@ -110,7 +136,7 @@
   flex-shrink: 0;
   min-width: 225px;
   padding: 22px 25px;
-  border: 1px solid rgba(113, 201, 206, 0.4);
+  border: 1px solid var(--border-color);
   border-radius: 18px;
   background: rgba(113, 201, 206, 0.12);
 
@@ -124,7 +150,7 @@
 
   strong {
     display: block;
-    color: var(--color-primary);
+    color: var(--text-primary);
     font-size: clamp(24px, 3vw, 32px);
     font-weight: 800;
     letter-spacing: -0.8px;
@@ -132,7 +158,7 @@
   }
 }
 
-// Main layout
+/* MAIN LAYOUT */
 
 .advance-layout {
   display: grid;
@@ -147,30 +173,34 @@
   min-width: 0;
 }
 
-// Form cards
+/* FORM CARDS */
 
 .advance-card {
   min-width: 0;
   padding: 27px;
   border: 1px solid var(--border-color);
   border-radius: 19px;
-  background: var(--bg-secondary);
-  box-shadow: 0 8px 25px rgba(20, 70, 80, 0.045);
+  background: var(--bg-card);
+  box-shadow: var(--navbar-shadow);
   transition:
     border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 
   &:hover {
-    border-color: rgba(113, 201, 206, 0.55);
-    box-shadow: 0 12px 30px rgba(20, 70, 80, 0.07);
+    border-color: var(--color-primary);
   }
 }
+
+/* SECTION TITLE */
 
 .advance-section-title {
   display: flex;
   align-items: flex-start;
   gap: 15px;
   margin-bottom: 25px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border-color);
 
   h2 {
     margin: 0 0 6px;
@@ -194,20 +224,20 @@
   width: 39px;
   height: 39px;
   place-items: center;
-  border: 1px solid rgba(113, 201, 206, 0.45);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  background: rgba(113, 201, 206, 0.13);
+  background: var(--bg-secondary);
   color: var(--color-primary);
   font-size: 13px;
   font-weight: 800;
 }
 
-// Form grid
+/* FORM GRID */
 
 .advance-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 19px;
+  gap: 22px 19px;
 
   &.three {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -220,23 +250,26 @@
   min-width: 0;
   gap: 8px;
 
-  label {
+  > label {
     color: var(--text-primary);
     font-size: 13px;
     font-weight: 650;
     line-height: 1.4;
   }
 
+  /* Native input fallback */
+
   input,
   select {
     width: 100%;
     min-width: 0;
     height: 47px;
+    box-sizing: border-box;
     padding: 0 13px;
     border: 1px solid var(--border-color);
     border-radius: 10px;
     outline: none;
-    background: var(--bg-primary);
+    background: var(--bg-secondary);
     color: var(--text-primary);
     font-family: inherit;
     font-size: 13px;
@@ -251,12 +284,18 @@
     }
 
     &:hover {
-      border-color: var(--color-accent);
+      border-color: var(--color-primary);
     }
 
     &:focus {
-      border-color: var(--color-accent);
+      border-color: var(--color-primary);
       box-shadow: 0 0 0 3px rgba(113, 201, 206, 0.17);
+      background: var(--bg-card);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
     }
   }
 
@@ -269,7 +308,159 @@
   }
 }
 
-// Result panel
+/* MUI NUMBER FIELD */
+
+.advance-field {
+  .MuiFormControl-root {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .MuiInputLabel-root {
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    &.Mui-focused {
+      color: var(--color-primary);
+    }
+
+    &.Mui-error {
+      color: #dc2626;
+    }
+  }
+
+  .MuiOutlinedInput-root {
+    width: 100%;
+    min-width: 0;
+    min-height: 47px;
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+    transition: all 0.2s ease;
+
+    fieldset {
+      border: 1px solid var(--border-color);
+    }
+
+    &:hover fieldset {
+      border-color: var(--color-primary);
+    }
+
+    &.Mui-focused {
+      background: var(--bg-card);
+
+      fieldset {
+        border-color: var(--color-primary);
+        border-width: 1.5px;
+      }
+    }
+
+    &.Mui-disabled {
+      background: var(--bg-secondary);
+      opacity: 0.65;
+    }
+
+    input {
+      height: auto;
+      min-height: 47px;
+      padding: 12px 13px;
+      box-sizing: border-box;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+
+      &::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.7;
+      }
+    }
+  }
+
+  .MuiFormHelperText-root {
+    margin-left: 2px;
+    font-size: 11px;
+  }
+}
+
+/* MUI SELECT FIELD */
+
+.advance-field {
+  .MuiInputBase-root.MuiOutlinedInput-root {
+    min-height: 47px;
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+
+  .MuiSelect-select {
+    display: flex;
+    align-items: center;
+    min-height: 47px !important;
+    box-sizing: border-box;
+    padding: 12px 38px 12px 13px !important;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 13px;
+  }
+
+  .MuiSelect-icon {
+    right: 10px;
+    color: var(--text-secondary);
+  }
+
+  .MuiOutlinedInput-notchedOutline {
+    border-color: var(--border-color);
+  }
+
+  .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+    border-color: var(--color-primary);
+  }
+
+  .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+    border-color: var(--color-primary);
+    border-width: 1.5px;
+  }
+}
+
+/* MUI SELECT MENU */
+
+.MuiPopover-root {
+  .MuiPaper-root {
+    margin-top: 5px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: var(--navbar-shadow);
+
+    .MuiMenuItem-root {
+      min-height: 42px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 13px;
+
+      &:hover {
+        background: var(--nav-hover);
+      }
+
+      &.Mui-selected {
+        background: var(--bg-secondary);
+        font-weight: 700;
+
+        &:hover {
+          background: var(--nav-hover);
+        }
+      }
+    }
+  }
+}
+
+/* RESULT PANEL */
 
 .advance-result-panel {
   position: sticky;
@@ -277,19 +468,18 @@
   overflow: hidden;
   border: 1px solid var(--border-color);
   border-radius: 20px;
-  background: var(--bg-secondary);
-  box-shadow: 0 12px 35px rgba(20, 70, 80, 0.07);
+  background: var(--bg-card);
+  box-shadow: var(--navbar-shadow);
 }
 
 .advance-result-head {
   padding: 29px 25px;
-  background:
-    radial-gradient(circle at 90% 0%, rgba(255, 255, 255, 0.16), transparent 35%),
-    linear-gradient(135deg, #137d9a, #168fa1);
-  color: #fff;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--navbar-gradient);
 
   h2 {
     margin: 13px 0 7px;
+    color: var(--text-primary);
     font-size: clamp(27px, 3vw, 35px);
     line-height: 1.2;
     font-weight: 850;
@@ -299,7 +489,7 @@
 
   p {
     margin: 0;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--text-secondary);
     font-size: 13px;
   }
 }
@@ -307,10 +497,10 @@
 .advance-result-label {
   display: inline-block;
   padding: 6px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid var(--border-color);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.13);
-  color: #fff;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 1.3px;
@@ -342,7 +532,7 @@
 
   &.final {
     align-items: flex-start;
-    margin-top: 5px;
+    margin-top: 10px;
     padding: 17px 13px;
     border: 1px solid rgba(113, 201, 206, 0.4);
     border-radius: 12px;
@@ -360,7 +550,7 @@
   }
 }
 
-// Advance tax schedule
+/* ADVANCE TAX SCHEDULE */
 
 .advance-schedule-wrap {
   padding: 23px 22px 20px;
@@ -397,7 +587,7 @@
   padding: 13px 12px;
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
 
   span {
     color: var(--text-secondary);
@@ -418,7 +608,7 @@
   padding: 16px;
   border: 1px dashed var(--border-color);
   border-radius: 12px;
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
 
   strong {
     display: block;
@@ -441,10 +631,12 @@
   gap: 9px;
   margin: 0 22px 22px;
   padding: 13px;
+  border: 1px solid var(--border-color);
   border-radius: 11px;
-  background: rgba(113, 201, 206, 0.1);
+  background: var(--bg-secondary);
 
   span {
+    flex-shrink: 0;
     color: var(--color-primary);
     font-size: 16px;
   }
@@ -457,7 +649,72 @@
   }
 }
 
-// Responsive design
+/* BUTTON LOADING STATE */
+
+.advance-tax-page {
+  .MuiButton-root {
+    text-transform: none;
+    font-family: inherit;
+    font-weight: 700;
+  }
+
+  .MuiButton-root.Mui-disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .MuiCircularProgress-root {
+    color: currentColor;
+  }
+}
+
+/* SKELETON LOADER */
+
+.advance-skeleton {
+  display: grid;
+  gap: 22px;
+}
+
+.advance-skeleton-card {
+  padding: 27px;
+  border: 1px solid var(--border-color);
+  border-radius: 19px;
+  background: var(--bg-card);
+}
+
+.advance-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 19px;
+
+  &.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.advance-skeleton-block {
+  height: 47px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.advance-skeleton-title {
+  width: 42%;
+  height: 22px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+}
+
+.advance-skeleton-text {
+  width: 65%;
+  height: 14px;
+  margin-bottom: 24px;
+  border-radius: 5px;
+  background: var(--bg-secondary);
+}
+
+/* RESPONSIVE DESIGN */
 
 @media (max-width: 1100px) {
   .advance-layout {
@@ -549,7 +806,9 @@
   }
 
   .advance-form-grid,
-  .advance-form-grid.three {
+  .advance-form-grid.three,
+  .advance-skeleton-grid,
+  .advance-skeleton-grid.three {
     grid-template-columns: 1fr;
     gap: 16px;
   }
@@ -573,7 +832,13 @@
   .advance-result-note {
     margin: 0 16px 17px;
   }
+
+  .advance-skeleton-card {
+    padding: 20px 16px;
+  }
 }
+
+/* ACCESSIBILITY */
 
 @media (prefers-reduced-motion: reduce) {
   .advance-tax-page *,

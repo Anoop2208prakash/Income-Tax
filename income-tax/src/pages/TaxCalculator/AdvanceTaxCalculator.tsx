@@ -1,9 +1,11 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
-import Breadcrumb from "../../components/Breadcrumb";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import CircularProgress from "@mui/material/CircularProgress";
+
 import SelectField from "../../components/ui/SelectField";
 import NumberField from "../../components/ui/NumberField";
+import SkeletonLoader from "../../components/ui/SkeletonLoader";
 
 import "./advance-tax-calculator.scss";
 
@@ -75,7 +77,6 @@ interface TaxForm {
 }
 
 type SelectFieldKey = "residential" | "regime" | "age";
-
 type NumericField = Exclude<keyof TaxForm, SelectFieldKey>;
 
 interface InputField {
@@ -93,6 +94,8 @@ interface SelectOption {
   label: string;
   value: string;
 }
+
+// INITIAL FORM DATA
 
 const initialForm: TaxForm = {
   residential: "resident",
@@ -217,7 +220,6 @@ const capitalGainFields: InputField[] = [
     label: "BF STCG Loss",
     placeholder: "Enter brought forward STCG loss",
   },
-
   {
     key: "stcgApplicableQ1",
     label: "STCG Applicable Rate Q1",
@@ -238,7 +240,6 @@ const capitalGainFields: InputField[] = [
     label: "STCG Applicable Rate Q4",
     placeholder: "Jan–Mar",
   },
-
   {
     key: "stcg20Q1",
     label: "STCG 20% Q1",
@@ -259,7 +260,6 @@ const capitalGainFields: InputField[] = [
     label: "STCG 20% Q4",
     placeholder: "Jan–Mar",
   },
-
   {
     key: "otherSources",
     label: "Other Sources",
@@ -270,7 +270,6 @@ const capitalGainFields: InputField[] = [
     label: "BF LTCG Loss",
     placeholder: "Enter brought forward LTCG loss",
   },
-
   {
     key: "ltcg125Q1",
     label: "LTCG 12.5% Q1",
@@ -291,7 +290,6 @@ const capitalGainFields: InputField[] = [
     label: "LTCG 12.5% Q4",
     placeholder: "Jan–Mar",
   },
-
   {
     key: "ltcg20Q1",
     label: "LTCG 20% Q1",
@@ -312,7 +310,6 @@ const capitalGainFields: InputField[] = [
     label: "LTCG 20% Q4",
     placeholder: "Jan–Mar",
   },
-
   {
     key: "ltcgApplicableQ1",
     label: "LTCG Applicable Rate Q1",
@@ -333,7 +330,6 @@ const capitalGainFields: InputField[] = [
     label: "LTCG Applicable Rate Q4",
     placeholder: "Jan–Mar",
   },
-
   {
     key: "ltcg112A",
     label: "LTCG Section 112A",
@@ -380,6 +376,30 @@ export default function AdvanceTaxCalculator() {
   const navigate = useNavigate();
 
   const [f, setF] = useState<TaxForm>(initialForm);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  // INITIAL SKELETON LOADING
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setIsPageLoading(false);
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  // BACK NAVIGATION
+
+  const handleBack = () => {
+    if (isNavigating) return;
+
+    setIsNavigating(true);
+
+    window.setTimeout(() => {
+      navigate(-1);
+    }, 200);
+  };
 
   // UPDATE SELECT FIELDS
 
@@ -392,10 +412,10 @@ export default function AdvanceTaxCalculator() {
 
   // UPDATE NUMBER FIELDS
 
-  const updateNumber = (key: NumericField, value: string) => {
+  const updateNumber = (key: NumericField, value: number | null) => {
     setF((previous) => ({
       ...previous,
-      [key]: Number(value) || 0,
+      [key]: value ?? 0,
     }));
   };
 
@@ -567,7 +587,6 @@ export default function AdvanceTaxCalculator() {
     }
 
     const speculativeTax = speculative * 0.3;
-
     const capitalGains = capitalGainTax();
 
     let total = slab + capitalGains + speculativeTax;
@@ -607,18 +626,75 @@ export default function AdvanceTaxCalculator() {
           label={item.label}
           value={f[item.key]}
           placeholder={item.placeholder}
-          min={0}
-          step="any"
+          min={item.key === "house" ? undefined : 0}
+          step={0.01}
           fullWidth
           onChange={(value) => updateNumber(item.key, value)}
         />
       </div>
     ));
 
-  return (
-    <main className="advance-tax-page">
-      <Breadcrumb current="Advance Tax Calculator" />
+  // SKELETON LOADER
 
+  if (isPageLoading) {
+    return (
+      <main className="advance-tax-page" aria-busy="true">
+        <div className="advance-tax-container">
+          <div className="advance-skeleton-back">
+            <SkeletonLoader variant="rounded" width={115} height={48} />
+          </div>
+
+          <header className="advance-header advance-skeleton-header">
+            <div className="advance-skeleton-content">
+              <SkeletonLoader variant="text" width="35%" height={20} />
+              <SkeletonLoader variant="text" width="70%" height={48} />
+              <SkeletonLoader variant="text" width="90%" height={24} />
+            </div>
+
+            <SkeletonLoader variant="rounded" width={190} height={90} />
+          </header>
+
+          <div className="advance-layout">
+            <section className="advance-left-stack">
+              {[1, 2, 3, 4].map((section) => (
+                <div className="advance-card" key={section}>
+                  <SkeletonLoader variant="text" width="40%" height={30} />
+                  <SkeletonLoader variant="text" width="65%" height={20} />
+
+                  <div className="advance-form-grid">
+                    {Array.from(
+                      {
+                        length:
+                          section === 1 ? 3 : section === 2 ? 5 : 6,
+                      },
+                      (_, index) => (
+                        <SkeletonLoader
+                          key={index}
+                          variant="rounded"
+                          height={55}
+                        />
+                      )
+                    )}
+                  </div>
+                </div>
+              ))}
+            </section>
+
+            <aside className="advance-result-panel advance-skeleton-result">
+              <SkeletonLoader variant="rounded" height={150} />
+              <SkeletonLoader variant="text" height={30} count={5} />
+              <SkeletonLoader variant="rounded" height={80} />
+            </aside>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // MAIN PAGE
+
+  return (
+    <main className="advance-tax-page" aria-busy={isNavigating}>
       <div className="advance-tax-container">
         {/* BACK BUTTON */}
 
@@ -626,10 +702,26 @@ export default function AdvanceTaxCalculator() {
           <button
             type="button"
             className="advance-back-btn"
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
+            disabled={isNavigating}
+            aria-label={isNavigating ? "Going back" : "Go back"}
           >
-            <span aria-hidden="true">←</span>
-            Back
+            {isNavigating ? (
+              <>
+                <CircularProgress
+                  size={17}
+                  thickness={5}
+                  className="advance-button-spinner"
+                  aria-label="Loading"
+                />
+                Going back...
+              </>
+            ) : (
+              <>
+                <span aria-hidden="true">←</span>
+                Back
+              </>
+            )}
           </button>
         </div>
 
