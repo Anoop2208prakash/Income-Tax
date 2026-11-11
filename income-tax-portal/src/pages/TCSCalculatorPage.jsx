@@ -1,0 +1,2588 @@
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { NumberField as BaseNumberField } from "@base-ui/react/number-field";
+import { Button, CircularProgress, MenuItem, Skeleton, TextField } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
+
+// ==========================================================================
+// FY 2026-27 (Tax Year 2026-27) — Income-tax Act, 2025
+// Source: TRACES TDS rate chart.
+//
+// Section label format:  NEW SECTION (OLD SECTION) - Description
+//
+// The chart rows below are kept exactly as received. The calculator entries
+// (label / threshold / rate) are generated from them by buildSection2026().
+// FY 2025-26 and older years keep using the original lists inside the
+// component — nothing there has been changed.
+// ==========================================================================
+const NEW_ACT_FY = "2026-27";
+
+const getFinancialYearLabel = (fy) =>
+  fy === NEW_ACT_FY ? `${fy} (Tax Year ${fy})` : fy;
+
+// Constants used inside the chart rows
+const CONTRACT_LIMIT = "30000"; // 194C single-payment limit
+const CONTRACT_AGGREGATE_LIMIT = "100000"; // 194C aggregate-during-the-year limit
+const BOND_4A = "4%"; // 194LC(2)(ib)  - IFSC bond issued before 01-07-2023
+const BOND_4B = "9%"; // 194LC(2)(ic)  - IFSC bond issued on/after 01-07-2023
+const NR_RES = "10% - For Residents\n30% - For Non Resident";
+
+const tdsChart2026 = [
+  { code: '1004', old: '192A', sec: '392(7)', nature: 'Any payment of accumulated balance due to an employee', threshold: '50000', ind: '10%', other: '-' },
+
+  { code: '1005', old: '194D', sec: '393(1) [Table: Sl. No. 1(i)]', nature: 'Commission or brokerage - insurance', threshold: '20000', ind: '2%', other: '10%' },
+  { code: '1006', old: '194H', sec: '393(1) [Table: Sl. No. 1(ii)]', nature: 'Commission or brokerage - others', threshold: '20000', ind: '2%', other: '2%' },
+  { code: '', old: '', sec: '393(1) [Table: Sl. No. 2(i)]', nature: 'Payment of any other Rent', threshold: '50000', ind: '2%', other: '2%' },
+  { code: '1008', old: '194I(a)', sec: '393(1) [Table: Sl. No. 2(ii).D(a)]', nature: 'Rent on machinery etc.- specified person', threshold: '50000', ind: '2%', other: '2%' },
+  { code: '1009', old: '194I(b)', sec: '393(1) [Table: Sl. No. 2(ii).D(b)]', nature: 'Rent other than machinery etc.- specified person', threshold: '50000', ind: '10%', other: '10%' },
+  { code: '', old: '', sec: '393(1) [Table: Sl. No. 3(i)]', nature: 'TDS on transfer of immovable property under section 393(1) [Table: Sl. No. 3(i)]', threshold: '5000000', ind: '1%', other: '1%' },
+  { code: '', old: '', sec: '393(1) [Table: Sl.No. 2(i)]', nature: 'TDS on Rent paid by Individual/HUF under section 393(1) [Table Sl. No. 2(i)]', threshold: '50000', ind: '2%', other: '2%' },
+  { code: '1011', old: '194IC', sec: '393(1) [Table: Sl. No. 3(ii)]', nature: 'Payment on any consideration, not being consideration in kind, under the agreement referred to in section 67(14).', threshold: 'Nil', ind: '10%', other: '10%' },
+  { code: '1012', old: '194LA', sec: '393(1) [Table: Sl. No. 3(iii)]', nature: 'Payment of compensation on acquisition of certain immovable property', threshold: '500000', ind: '10%', other: '10%' },
+  { code: '1013', old: '194K', sec: '393(1) [Table: Sl. No. 4(i)]', nature: 'Income payable to a resident assessee in respect of Units of a specified Mutual Fund specified under Schedule VII [Table: Sl. No. 20 or 21] or units from the Administrator of the specified undertaking or units from specified company', threshold: '10000', ind: '10%', other: '10%' },
+  { code: '1014', old: '194LBA', sec: '393(1) [Table: Sl. No. 4(ii)]', nature: 'Certain income in the form of interest from units of a business trust to a resident unit holder', threshold: 'Nil', ind: '10%', other: '10%' },
+  { code: '1015', old: '194LBA', sec: '393(1) [Table: Sl. No. 4(ii)]', nature: 'Certain income in the form of dividend from units of a business trust to a resident unit holder', threshold: 'Nil', ind: '10%', other: '10%' },
+  { code: '1016', old: '194LBA', sec: '393(1) [Table: Sl. No. 4(ii)]', nature: 'Certain income in the form of Renting from units of a business trust being a real estate investment trust to a resident unit holder', threshold: 'Nil', ind: '10%', other: '10%' },
+  { code: '1017', old: '194LBB', sec: '393(1) [Table: Sl. No. 4(iii)]', nature: 'Any income, other than that proportion of income which is exempt under Schedule V [Table: Sl. No. 2], in respect of units of an investment fund specified in section 224, payable to its unitholder.', threshold: 'Nil', ind: '10%', other: '10%' },
+  { code: '1018', old: '194LBC', sec: '393(1) [Table: Sl. No. 4(iv)]', nature: 'Any income, in respect of an investment in a securitisation trust specified in section 221 to an investor.', threshold: 'Nil', ind: '10%', other: '10%' },
+  { code: '1019', old: '193', sec: '393(1) [Table: Sl. No. 5(i)]', nature: 'Any income by way of Interest on securities', threshold: '10000', ind: '10%', other: '10%' },
+  { code: '1020', old: '194A', sec: '393(1) [Table: Sl. No. 5(ii).D(a)]', nature: 'Any income by way of interest other than interest on securities, in case of deductee/payee is a senior citizen', threshold: '100000', ind: '10%', other: '-' },
+  { code: '1021', old: '194A', sec: '393(1) [Table: Sl. No. 5(ii).D(b)]', nature: 'Any income by way of interest other than interest on securities, in case of deductee/payee is other than senior citizen', threshold: '50000', ind: '10%', other: '10%' },
+  { code: '1022', old: '194A', sec: '393(1) [Table: Sl. No. 5(iii)]', nature: 'Any income being interest other than interest on securities', threshold: '10000', ind: '10%', other: '10%' },
+  { code: '1023', old: '194C', sec: '393(1) [Table: Sl. No. 6(i).D(a)]', nature: 'Any sum for carrying out any work (including supply of labour for carrying out any work) in pursuance of a contract between the contractor and a designated person – if contractor is individual or Hindu undivided family (Single Payment)', threshold: CONTRACT_LIMIT, ind: '1%', other: '2%' },
+  { code: '1023-AGG', old: '194C', sec: '393(1) [Table: Sl. No. 6(i).D(a)]', nature: 'Any sum for carrying out any work (including supply of labour for carrying out any work) in pursuance of a contract between the contractor and a designated person – if contractor is individual or Hindu undivided family (Aggregate for the Year)', threshold: CONTRACT_AGGREGATE_LIMIT, ind: '1%', other: '2%' },
+  { code: '1024', old: '194C', sec: '393(1) [Table: Sl. No. 6(i).D(b)]', nature: 'Any sum for carrying out any work (including supply of labour for carrying out any work) in pursuance of a contract between the contractor and a designated person – if contractor is a person other than individual or Hindu undivided family (Single Payment)', threshold: CONTRACT_LIMIT, ind: '1%', other: '2%' },
+  { code: '1024-AGG', old: '194C', sec: '393(1) [Table: Sl. No. 6(i).D(b)]', nature: 'Any sum for carrying out any work (including supply of labour for carrying out any work) in pursuance of a contract between the contractor and a designated person – if contractor is a person other than individual or Hindu undivided family (Aggregate for the Year)', threshold: CONTRACT_AGGREGATE_LIMIT, ind: '1%', other: '2%' },
+  { code: '', old: '', sec: '393(1) [Table: Sl. No. 6(ii)]', nature: 'TDS on payment made by individual_huf to Contractor / Professionals u/s. 393(1) [Table Sl. No. 6(ii)]', threshold: '5000000', ind: '2%', other: '-' },
+  { code: '1026', old: '194J(a)', sec: '393(1) [Table: Sl. No. 6(iii).D(a)]', nature: 'Any sum by way of–– (a) fees for technical services (not being a professional services); or (b) royalty in the nature of consideration for sale, distribution or exhibition of cinematographic films; or (c) payee, engaged only in the business of operation of call centre', threshold: '50000', ind: '2%', other: '2%' },
+  { code: '1027', old: '194J(b)', sec: '393(1) [Table: Sl. No. 6(iii).D(b)]', nature: 'Any sum by way of–– (a) fees for professional services; or (b) any sum referred to in section 26(2)(h)', threshold: '50000', ind: '10%', other: '10%' },
+  { code: '1028', old: '194J(b)', sec: '393(1) [Table: Sl. No. 6(iii).D(b)]', nature: 'Any sum by way of remuneration or fees or commission by whatever name called, other than those on which tax is deductible under section 392, to a director of a company', threshold: '–', ind: '10%', other: '10%' },
+  { code: '1029', old: '194', sec: '393(1) [Table: Sl. No. 7]', nature: 'Any dividends (including on preference shares) declared.', threshold: '10000(Individual)', ind: '10%', other: '10%' },
+  { code: '1030', old: '194DA', sec: '393(1) [Table: Sl. No. 8(i)]', nature: 'Any sum under a life insurance policy, including the sum allocated as bonus on such policy, other than the amount not includible in the total income under Schedule II [Table: Sl. No. 2]', threshold: '100000', ind: '2%', other: '2%' },
+  { code: '1031', old: '194Q', sec: '393(1) [Table: Sl. No. 8(ii)]', nature: 'Any sum for purchase of any goods', threshold: 'in excess of 5000000', ind: '0.10%', other: '0.10%' },
+  { code: '1033', old: '194R', sec: '393(1) [Table: Sl. No. 8(iv)]', nature: 'Any benefit or perquisite, whether convertible into money or not, arising from business or the exercise of a profession of any resident.', threshold: '20000', ind: '10%', other: '10%' },
+  { code: '', old: '', sec: '393(1) [Table: Sl. No. 8(iv) Note 6]', nature: 'Any benefit or perquisite, whether in cash or in kind or partly in cash and partly in kind, whether convertible into money or not, arising from business or the exercise of a profession of any resident.', threshold: '20000', ind: '10%', other: '10%' },
+  { code: '1035', old: '194O', sec: '393(1) [Table: Sl. No. 8(v)]', nature: 'Sale of goods or provision of services by an e-commerce participant, facilitated by an e-commerce operator through its digital or electronic facility or platform. - any e commerce operator', threshold: '500000(Individual/HUF)', ind: '0.10%', other: '0.10%' },
+  { code: '1037', old: '194S', sec: '393(1) [Table: Sl. No. 8(vi)]', nature: 'Any sum by way of consideration for transfer of a virtual digital asset by other than Individual or Hindu Undivided Family.', threshold: '10000', ind: '1%', other: '1%' },
+  { code: '', old: '', sec: '393(1) [Table: Sl. No. 8(vi)]', nature: 'Any sum by way of consideration for transfer of a virtual digital asset by Individual or Hindu Undivided Family 393(1) [Table: Sl. No. 8(vi)]', threshold: '50000', ind: '1%', other: '1%' },
+  { code: '', old: '', sec: '393(1) [Table: Sl. No. 8(vi)] Note 6', nature: 'Any sum by way of consideration, whether in cash or in kind or partly in cash and partly in kind, for transfer of a virtual digital asset', threshold: '10000', ind: '1%', other: '1%' },
+
+  { code: '1039', old: '194E', sec: '393(2) [Table: Sl. No. 1]', nature: 'Any income referred to in section 211.', threshold: '-', ind: '20%', other: '20%' },
+  { code: '1040', old: '194LC (2)(i)', sec: '393(2) [Table: Sl. No. 2]', nature: 'Any income by way of interest payable in respect of moneys borrowed in foreign currency from a source outside India,— (a) under a loan agreement or issue of long term infrastructure bond on or after the 1st July, 2012 but before the 1st July, 2023; or (b) by way of issue of any long-term bond on or after the 1st October, 2014 but before the 1st July, 2023, which is approved by the Central Government in this behalf (for non resident payee)', threshold: '-', ind: '5%', other: '5%' },
+  { code: '1041', old: '194LC (2)(ia)', sec: '393(2) [Table: Sl. No. 3]', nature: 'Any income by way of interest payable in respect of monies borrowed from a source outside India by way of issue of rupee denominated bond before the 1st July, 2023.', threshold: '-', ind: '5%', other: '5%' },
+  { code: '1042', old: '194LC (2)(ib)', sec: '393(2) [Table: Sl. No. 4.E(a)]', nature: 'Any income by way of interest payable in respect of monies borrowed from a source outside India by way of issue of any long-term bond or rupee denominated bond, which is listed only on a recognised stock exchange located in any International Financial Services Centre. - Issued on or after the 1st April, 2020 but before the 1st July, 2023', threshold: '-', ind: BOND_4A, other: BOND_4A },
+  { code: '1043', old: '194LC (2)(ic)', sec: '393(2) [Table: Sl. No. 4.E(b)]', nature: 'Any income by way of interest payable in respect of monies borrowed from a source outside India by way of issue of any long-term bond or rupee denominated bond, which is listed only on a recognised stock exchange located in any International Financial Services Centre - Issued on or after the 1st July, 2023', threshold: '-', ind: BOND_4B, other: BOND_4B },
+  { code: '1044', old: '194LB', sec: '393(2) [Table: Sl. No. 5]', nature: 'Income by way of interest from infrastructure debt fund', threshold: '-', ind: '5%', other: '5%' },
+  // Chart row "1045 / 1046" (5% Int or 10% Rental) is split in two so each can be selected separately
+  { code: '1045', old: '194LBA', sec: '393(2) [Table: Sl. No. 6.E(a)]', nature: 'Any distributed income referred to in section 223, being of the nature referred to in Schedule V [Table: Sl. No. 3.B(a)] – Interest', threshold: '-', ind: '5%', other: '5%' },
+  { code: '1046', old: '194LBA', sec: '393(2) [Table: Sl. No. 6.E(b)]', nature: 'Any distributed income referred to in section 223, being of the nature referred to in Schedule V [Table: Sl. No. 3.B(b)] – Rental', threshold: '-', ind: '10%', other: '10%' },
+  { code: '1047', old: '194LBA', sec: '393(2) [Table: Sl. No. 7]', nature: 'Distributed income from business trust (Schedule V, Table 4)\nOther Distributed income – could be capital gains , dividends, misc income', threshold: '-', ind: '30%', other: '35% - For Non Residents Company\n30% - For Non Residents other than companies' },
+  { code: '1048', old: '194LBB', sec: '393(2) [Table: Sl. No. 8]', nature: 'Income from investment funds (Section 224)', threshold: '-', ind: '10% - For Residents\n30% - For Non Resident', other: NR_RES },
+  { code: '1049', old: '194LBC', sec: '393(2) [Table: Sl. No. 9]', nature: 'Income from securitisation trust (Section 221)', threshold: '-', ind: '30%', other: NR_RES },
+  { code: '1050', old: '196A', sec: '393(2) [Table: Sl. No. 10]', nature: 'Income from mutual funds or specified company', threshold: '-', ind: '20% or rate provided in the agreement, whichever is lower', other: '20% or rate provided in the agreement, whichever is lower\n* Not Applicable for company' },
+  { code: '1051', old: '196B', sec: '393(2) [Table: Sl. No. 11]', nature: 'Income from units referred to in Section 208', threshold: '-', ind: '10%', other: '10%' },
+  { code: '1052', old: '196B', sec: '393(2) [Table: Sl. No. 12]', nature: 'Long-term capital gains from transfer of units referred in Section 208', threshold: '-', ind: '12.5%', other: '12.5%' },
+  { code: '1053', old: '196C', sec: '393(2) [Table: Sl. No. 13]', nature: 'Interest or dividends from bonds or GDRs (Section 209)', threshold: '-', ind: '10%', other: '10%' },
+  { code: '1054', old: '196C', sec: '393(2) [Table: Sl. No. 14]', nature: 'Long-term capital gains from transfer of bonds or GDRs (Section 209)', threshold: '-', ind: '12.5%', other: '12.5%' },
+  { code: '1055', old: '196D', sec: '393(2) [Table: Sl. No. 15]', nature: 'Income from securities referred in Section 210', threshold: '-', ind: '20%', other: '20%' },
+  { code: '1056', old: '196D(1A)', sec: '393(2) [Table: Sl. No. 16]', nature: 'Any income in respect of securities referred to in section 210(1)', threshold: '-', ind: '10%', other: '10%' },
+  { code: '1057', old: '195', sec: '393(2) [Table: Sl. No. 17]', nature: 'Any interest (not covered under S.No. 2–5) or any other sum chargeable under the Act (excluding salaries)', threshold: '-', ind: '-', other: 'Average rate as applicable' },
+
+  { code: '1058', old: '194B', sec: '393(3) [Table: Sl. No. 1]', nature: 'Any income by way of winnings (other than winnings from Sl. No. 2 of the table at section 393(3)) from–– (a) any lottery; or (b) crossword puzzle; or (c) card game and other game of any sort; or (d) gambling or betting of any form or nature whatsoever', threshold: '10000 for a single transaction', ind: '30%', other: '30%' },
+  { code: '1060', old: '194BA', sec: '393(3) [Table: Sl. No. 2]', nature: 'Any income by way of winnings from online game.', threshold: '-', ind: '30%', other: '30%' },
+  { code: '1062', old: '194BB', sec: '393(3) [Table: Sl. No. 3]', nature: 'Any income by way of winnings from any horse race.', threshold: '10000 for a single transaction', ind: '30%', other: '30%' },
+  { code: '1063', old: '194G', sec: '393(3) [Table: Sl. No. 4]', nature: 'Any income, credited or paid to a person, who is or has been stocking, distributing, purchasing or selling lottery tickets, by way of commission, remuneration or prize (by whatever name called) on such tickets', threshold: '20000', ind: '2%', other: '2%' },
+  { code: '1064', old: '194NC', sec: '393(3) [Table: Sl. No. 5.D(a)]', nature: 'Payment of certain amounts in cash by bank/ post office / co-operative society to a deductee being a co-operative society', threshold: '3 crore', ind: '2%', other: '2%' },
+  { code: '1065', old: '194N', sec: '393(3) [Table: Sl. No. 5.D(b)]', nature: 'Payment of certain amounts in cash by bank/ post office / co-operative society to a deductee being a person other than co-operative society', threshold: '1 crore', ind: '2%', other: '2%' },
+  { code: '1066', old: '194EE', sec: '393(3) [Table: Sl. No. 6]', nature: 'Any amount referred to in section 80CCA(2)(a) of the Income-tax Act, 1961 (43 of 1961).', threshold: '2500', ind: '10%', other: '10%' },
+  { code: '1067', old: '194T', sec: '393(3) [Table: Sl. No. 7]', nature: 'Any sum in the nature of salary, remuneration, commission, bonus or interest paid to a partner of the firm or credited to his account (including capital account).', threshold: '20000', ind: '-', other: '10%' },
+];
+
+// --------------------------------------------------------------------------
+// Calculator behaviour per chart row (keyed by chart code).
+//   logic       -> reuse the exact FY 2025-26 logic of that old section
+//                  (194C / 194D rate by category, 194N ITR filed / not filed)
+//   cooperative -> 194NC (true) / 194N (false) threshold row
+//
+// Every other row uses the chart's own "ind" (Individual/HUF) and "other"
+// (other than Individual/HUF) columns directly, picked by Recipient
+// Category. Where a column is "-" that category simply has no TDS under
+// that row (e.g. 392(7)/192A applies to Individual/HUF only; the partner
+// payment row 393(3)[Sl.No.7] applies to categories other than
+// Individual/HUF only) — so no TDS is calculated for it.
+// --------------------------------------------------------------------------
+
+// Rows whose ₹50,000 threshold under the chart is a MONTHLY limit — the
+// calculator only takes one "Amount Paid / Credited" value, so this note
+// clarifies what that single entered amount is being checked against.
+const MONTHLY_RENT_NOTE =
+  "This ₹50,000 threshold is per month — enter one payment's amount";
+
+// Two rent rows have no chart code, so they can't be targeted by code in
+// CALC_CONFIG_2026 — matched by their "sec" value instead (see
+// buildSection2026).
+const MONTHLY_RENT_SECS = new Set([
+  "393(1) [Table: Sl. No. 2(i)]",
+  "393(1) [Table: Sl.No. 2(i)]",
+]);
+
+const CALC_CONFIG_2026 = {
+  "1005": { logic: "194D" },
+  "1008": { thresholdNote: MONTHLY_RENT_NOTE },
+  "1009": { thresholdNote: MONTHLY_RENT_NOTE },
+  "1023": {
+    logic: "194C",
+    thresholdNote: "Applies to a single sum credited/paid (not the aggregate for the year)",
+  },
+  "1023-AGG": {
+    logic: "194C",
+    thresholdNote:
+      "Applies when the aggregate of such sums credited/paid during the financial year exceeds this limit",
+  },
+  "1024": {
+    logic: "194C",
+    thresholdNote: "Applies to a single sum credited/paid (not the aggregate for the year)",
+  },
+  "1024-AGG": {
+    logic: "194C",
+    thresholdNote:
+      "Applies when the aggregate of such sums credited/paid during the financial year exceeds this limit",
+  },
+
+  // Threshold only applies to specific Recipient Categories; every other
+  // category has no threshold (TDS applies from the first rupee).
+  "1029": { thresholdByCategory: { Individual: 10000, default: 0 } },
+  "1035": {
+    thresholdByCategory: { Individual: 500000, HUF: 500000, default: 0 },
+  },
+
+  // Rate is 30% for everyone except a Foreign Company deductee (35%),
+  // regardless of Residential Status.
+  "1047": {
+    rateMatrix: {
+      resident: { "Foreign Company": 35, default: 30 },
+      nonResident: { "Foreign Company": 35, default: 30 },
+    },
+  },
+
+  // Applies to Resident and Non-Resident deductees alike — rate depends on
+  // Residential Status and (for non-residents) Recipient Category.
+  "1048": {
+    showInBothLists: true,
+    rateMatrix: {
+      resident: { default: 10 },
+      nonResident: { "Foreign Company": 35, default: 30 },
+    },
+  },
+  "1049": {
+    showInBothLists: true,
+    rateMatrix: {
+      resident: { Individual: 30, HUF: 30, default: 10 },
+      nonResident: { "Foreign Company": 35, default: 30 },
+    },
+  },
+
+  // Only applies when the deductee is a Co-operative Society.
+  "1064": {
+    logic: "194N",
+    cooperative: true,
+    restrictToCategory: ["Co-operative Society"],
+  },
+  "1065": { logic: "194N", cooperative: false },
+
+  "1045": { thresholdNote: "This rate applies to Interest" },
+  "1046": { thresholdNote: "This rate applies to Rental" },
+  "1058": { thresholdNote: "The ₹10,000 threshold applies per single transaction" },
+  "1062": { thresholdNote: "The ₹10,000 threshold applies per single transaction" },
+};
+
+
+
+// Rows where the chart gives no single fixed percentage even after the
+// above rules ("rate in force" / "average rate as applicable") — these
+// need the rate entered manually.
+const MANUAL_RATE_CODES = new Set(["1057"]);
+
+// "10%" -> 10, "0.10%" -> 0.1, "-" -> null
+const toRate = (value) => {
+  const match = String(value ?? "").match(/^\s*(\d+(?:\.\d+)?)\s*%/);
+  return match ? Number(match[1]) : null;
+};
+
+// "Nil" / "-" -> 0, "3 crore" -> 30000000, "in excess of 5000000" -> 5000000
+const parseThreshold = (value) => {
+  const text = String(value ?? "").toLowerCase();
+  const crore = text.match(/(\d+(?:\.\d+)?)\s*crore/);
+  if (crore) return Number(crore[1]) * 10000000;
+  const digits = text.match(/\d+/);
+  return digits ? Number(digits[0]) : 0;
+};
+
+// Threshold that can vary by Recipient Category (1029 / 1035). Rows without
+// thresholdByCategory (including every FY 2025-26 and earlier entry) just
+// fall back to the row's own flat threshold, unchanged.
+const resolveThreshold2026 = (section, category) => {
+  if (!section) return 0;
+  if (!section.thresholdByCategory) return section.threshold;
+
+  if (category && section.thresholdByCategory[category] !== undefined) {
+    return section.thresholdByCategory[category];
+  }
+
+  return section.thresholdByCategory.default !== undefined
+    ? section.thresholdByCategory.default
+    : section.threshold;
+};
+
+// Rate that varies by Residential Status + Recipient Category (1047 / 1048
+// / 1049). Returns null when the row has no rateMatrix.
+const resolveRateMatrix2026 = (section, residentialStatus, category) => {
+  if (!section || !section.rateMatrix) return null;
+
+  const statusKey = residentialStatus === "nonResident" ? "nonResident" : "resident";
+  const catMap = section.rateMatrix[statusKey] || {};
+
+  if (category && catMap[category] !== undefined) return catMap[category];
+  return catMap.default !== undefined ? catMap.default : null;
+};
+
+const buildSection2026 = (row, index) => {
+  const config = CALC_CONFIG_2026[row.code] || {};
+  const indRate = toRate(row.ind);
+  const otherRate = toRate(row.other);
+  const manualRateRequired = MANUAL_RATE_CODES.has(row.code);
+
+  const rateText = manualRateRequired
+    ? "Rate in force (enter manually)"
+    : indRate !== null && otherRate !== null && indRate === otherRate
+    ? `${indRate}%`
+    : indRate !== null && otherRate !== null
+    ? `${indRate}% Individual/HUF, ${otherRate}% Others`
+    : indRate !== null
+    ? `${indRate}% (Individual/HUF only)`
+    : otherRate !== null
+    ? `${otherRate}% (Other than Individual/HUF)`
+    : "As applicable";
+
+  const nature = String(row.nature).replace(/\s*\n\s*/g, " ");
+  const oldSection = row.old ? ` (${row.old})` : "";
+  // Show the chart's own numeric code (1004, 1005, ...) when the chart
+  // gives one; leave it out entirely for the handful of rows the chart
+  // left blank, rather than showing a made-up placeholder.
+  const codePrefix = row.code ? `${row.code} - ` : "";
+  const thresholdNote =
+    config.thresholdNote ||
+    (MONTHLY_RENT_SECS.has(row.sec) ? MONTHLY_RENT_NOTE : undefined);
+
+  return {
+    code: row.code || `NA-${index + 1}`,
+    isNewAct: true,
+    sectionText: `${codePrefix}${row.sec}${oldSection}`,
+    label: `${codePrefix}${row.sec}${oldSection} - ${nature}`,
+    description: nature,
+    threshold: parseThreshold(row.threshold),
+    rate: rateText,
+    indRate,
+    otherRate,
+    manualRateRequired,
+    thresholdNote,
+    ...config,
+  };
+};
+
+const sections2026 = tdsChart2026.map((row, index) => ({
+  row,
+  entry: buildSection2026(row, index),
+}));
+
+// 392(7) + 393(1) + 393(3), plus any 393(2) row explicitly marked
+// showInBothLists (e.g. 1048 / 1049, which also apply to residents)
+const residentTDSSections2026 = sections2026
+  .filter(({ row, entry }) => !row.sec.startsWith("393(2)") || entry.showInBothLists)
+  .map(({ entry }) => entry);
+
+// 392(7) + 393(2) + 393(3) (194NC is only for co-operative society deductee)
+const nonResidentTDSSections2026 = sections2026
+  .filter(({ row }) => !row.sec.startsWith("393(1)") && row.code !== "1064")
+  .map(({ entry }) => entry);
+
+// A dropdown whose open list shows the FULL option text, wrapped onto as
+// many lines as needed, inside a box the same width as the trigger (i.e.
+// the same width as every other input field) — a plain <select>'s native
+// popup either truncates long option text or grows wider than the screen,
+// neither of which this component does.
+function TdsWrapSelect({ value, onChange, options, getLabel, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !menuRef.current) return;
+    const selectedEl = menuRef.current.querySelector(".is-selected");
+    if (selectedEl) selectedEl.scrollIntoView({ block: "nearest" });
+  }, [open]);
+
+  const selected = options.find((option) => option.code === value);
+
+  return (
+    <div className="tds-wrap-select" ref={containerRef}>
+      <button
+        type="button"
+        className={`tds-wrap-select-trigger${open ? " is-open" : ""}`}
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <span>{selected ? getLabel(selected) : placeholder}</span>
+        <span className="tds-wrap-select-arrow">{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div className="tds-wrap-select-menu" ref={menuRef}>
+          {options.map((option) => (
+            <div
+              key={option.code}
+              className={`tds-wrap-select-option${
+                option.code === value ? " is-selected" : ""
+              }`}
+              onClick={() => {
+                onChange(option.code);
+                setOpen(false);
+              }}
+            >
+              {getLabel(option)}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TdsNumberField({ label, value, onChange, placeholder, step = 1, min = 0 }) {
+  const numericValue =
+    value === "" || value === null || value === undefined ? null : Number(value);
+
+  return (
+    <div className="tds-number-field">
+      <BaseNumberField.Root
+        value={Number.isFinite(numericValue) ? numericValue : null}
+        onValueChange={(nextValue) =>
+          onChange(nextValue == null ? "" : String(nextValue))
+        }
+        min={min}
+        step={step}
+        className="tds-number-root"
+      >
+        <BaseNumberField.Group className="tds-number-group">
+          <BaseNumberField.Input
+            aria-label={label}
+            placeholder={placeholder}
+            className="tds-number-input"
+          />
+          <div className="tds-number-steppers">
+            <BaseNumberField.Increment
+              className="tds-number-step"
+              aria-label={`Increase ${label}`}
+            >
+              +
+            </BaseNumberField.Increment>
+            <BaseNumberField.Decrement
+              className="tds-number-step"
+              aria-label={`Decrease ${label}`}
+            >
+              −
+            </BaseNumberField.Decrement>
+          </div>
+        </BaseNumberField.Group>
+      </BaseNumberField.Root>
+    </div>
+  );
+}
+
+export default function TDSCalculatorPage() {
+     const navigate = useNavigate();
+  const recipientCategories = [
+    "Individual",
+    "HUF",
+    "Firm",
+    "Local Authority",
+    "Association of Person",
+    "Body of Individual",
+    "Co-operative Society",
+    "Artificial Judicial Person",
+    "Foreign Company",
+    "Domestic Company",
+  ];
+
+  const financialYears = [
+    "2016-17",
+    "2017-18",
+    "2018-19",
+    "2019-20",
+    "2020-21",
+    "2021-22",
+    "2022-23",
+    "2023-24",
+    "2024-25",
+    "2025-26",
+    "2026-27",
+  ];
+
+  const residentTDSSections = [
+    // Core salary + interest
+
+    {
+    code: "192",
+    label: "192 - Salary",
+    threshold: 0,
+    rate: "Slab Rates",
+  },
+  {
+    code: "192A",
+    label: "192A - Premature withdrawal from EPF",
+    threshold: 50000,
+    rate: "10%",
+  },
+  {
+    code: "193",
+    label: "193 - Interest on Securities",
+    threshold: 10000,
+    rate: "10%",
+  },
+  {
+    code: "194",
+    label: "194 - Dividends",
+    threshold: 10000,
+    rate: "10%",
+  },
+  {
+    code: "194A",
+    label: "194A - Interest on bank/post office deposits",
+    threshold: 50000,
+    rate: "10%",
+  },
+  {
+    code: "194A-SC",
+    label: "194A - Senior Citizen Interest",
+    threshold: 100000,
+    rate: "10%",
+  },
+  {
+    code: "194A-O",
+    label: "194A - Interest (Others)",
+    threshold: 10000,
+    rate: "10%",
+  },
+  {
+    code: "194K",
+    label: "194K - Mutual Fund Dividend",
+    threshold: 10000,
+    rate: "10%",
+  },
+  {
+    code: "194B",
+    label: "194B - Lottery / Gambling Winnings",
+    threshold: 10000,
+    rate: "30%",
+  },
+  {
+    code: "194BA",
+    label: "194BA - Online Gaming Winnings",
+    threshold: 0,
+    rate: "30%",
+  },
+  {
+    code: "194BB",
+    label: "194BB - Horse Race Winnings",
+    threshold: 10000,
+    rate: "30%",
+  },
+  {
+    code: "194C",
+    label: "194C - Contractor Payment",
+    threshold: 30000,
+    yearlyThreshold: 100000,
+    rate: "1% Individual/HUF, 2% Others",
+  },
+  {
+    code: "194D",
+    label: "194D - Insurance Commission",
+    threshold: 20000,
+    rate: "2% Individual/HUF, 10% Others",
+  },
+  {
+    code: "194DA",
+    label: "194DA - Life Insurance Policy",
+    threshold: 100000,
+    rate: "2%",
+  },
+  {
+    code: "194EE",
+    label: "194EE - NSS Payment",
+    threshold: 2500,
+    rate: "10%",
+  },
+  {
+    code: "194G",
+    label: "194G - Lottery Commission",
+    threshold: 20000,
+    rate: "2%",
+  },
+  {
+    code: "194H",
+    label: "194H - Commission / Brokerage",
+    threshold: 20000,
+    rate: "2%",
+  },
+  {
+    code: "194J-A",
+    label: "194J(a) - Technical Services",
+    threshold: 50000,
+    rate: "2%",
+  },
+  {
+    code: "194J-B",
+    label: "194J(b) - Professional Services",
+    threshold: 50000,
+    rate: "10%",
+  },
+  {
+    code: "194I-A",
+    label: "194I(a) - Rent Plant & Machinery",
+    threshold: 50000,
+    rate: "2%",
+  },
+  {
+    code: "194I-B",
+    label: "194I(b) - Rent Land/Building/Furniture",
+    threshold: 50000,
+    rate: "10%",
+  },
+  {
+    code: "194IA",
+    label: "194IA - Immovable Property Transfer",
+    threshold: 5000000,
+    rate: "1%",
+  },
+  {
+    code: "194IB",
+    label: "194IB - Rent by Individual/HUF",
+    threshold: 50000,
+    rate: "2%",
+  },
+  {
+    code: "194IC",
+    label: "194IC - Joint Development Agreement",
+    threshold: 0,
+    rate: "10%",
+  },
+  {
+    code: "194LA",
+    label: "194LA - Compensation on Property Transfer",
+    threshold: 500000,
+    rate: "10%",
+  },
+  {
+    code: "194LBA",
+    label: "194LBA - Business Trust Income",
+    threshold: 0,
+    rate: "10%",
+  },
+  {
+    code: "194LBB",
+    label: "194LBB - Investment Fund Income",
+    threshold: 0,
+    rate: "10%",
+  },
+  {
+    code: "194LBC",
+    label: "194LBC - Securitization Trust Income",
+    threshold: 0,
+    rate: "10%",
+  },
+  {
+    code: "194M",
+    label: "194M - Contract/Brokerage/Professional Fees",
+    threshold: 5000000,
+    rate: "2%",
+  },
+  {
+  code: "194N",
+  label: "194N - Cash Withdrawal",
+  threshold: 10000000, // Normal threshold 1 Crore
+  cooperativeThreshold: 30000000, // Co-operative Society 3 Crore
+  noITRThreshold: 2000000, // 20 Lakh if no ITR
+  rate: "2% / 5% conditional",
+  note: "2% above 1Cr, 3Cr for Co-op Society, special rates if ITR not filed",
+},
+  {
+    code: "194O",
+    label: "194O - E-commerce Participant",
+    threshold: 500000,
+    rate: "0.10%",
+  },
+  {
+    code: "194P",
+    label: "194P - Specified Senior Citizen",
+    threshold: 0,
+    rate: "Slab Rates",
+  },
+  {
+    code: "194Q",
+    label: "194Q - Purchase of Goods",
+    threshold: 5000000,
+    rate: "0.10%",
+  },
+  {
+    code: "194R",
+    label: "194R - Benefits / Perquisites",
+    threshold: 20000,
+    rate: "10%",
+  },
+  {
+    code: "194S",
+    label: "194S - Virtual Digital Asset",
+    threshold: 10000,
+    rate: "1%",
+  },
+  {
+    code: "194S-SP",
+    label: "194S - VDA (Specified Person)",
+    threshold: 50000,
+    rate: "1%",
+  },
+  // ==============================
+// SECTION 194T — RESIDENT
+// Payment to Partner
+// ==============================
+
+{
+  code: "194T",
+  label: "194T - Payment to Partner",
+  description:
+    "Salary, remuneration, commission, bonus or interest to partner of firm (w.e.f. 01-04-2025)",
+  threshold: 20000,
+  rate: "10%",
+}
+];
+const nonResidentTDSSections = [
+  {
+    code: "192",
+    label: "192 - Payment of Salary",
+    description: "Payment of Salary",
+    rate: "Slab Rates",
+  },
+  {
+    code: "192A",
+    label: "192A - EPF Withdrawal",
+    description:
+      "Payment of accumulated balance of provident fund taxable in hands of employee",
+    rate: "10%",
+  },
+  {
+    code: "194B",
+    label: "194B - Lottery / Gambling Winnings",
+    description:
+      "Lottery, crossword puzzles, card games, gambling, betting winnings",
+    rate: "30%",
+  },
+  {
+    code: "194BA",
+    label: "194BA - Online Gaming Winnings",
+    description: "Income by way of winnings from any online game",
+    rate: "30%",
+  },
+  {
+    code: "194BB",
+    label: "194BB - Horse Race Winnings",
+    description: "Income by way of winnings from horse races",
+    rate: "30%",
+  },
+  {
+    code: "194E",
+    label: "194E - Non Resident Sportsman",
+    description:
+      "Payment to non-resident sportsmen / sports association",
+    rate: "20%",
+  },
+  {
+    code: "194EE",
+    label: "194EE - NSS Payment",
+    description:
+      "Payment in respect of deposits under National Savings Scheme",
+    rate: "10%",
+  },
+  {
+    code: "194F",
+    label: "194F - Mutual Fund Repurchase",
+    description:
+      "Payment on account of repurchase of unit by Mutual Fund / UTI",
+    rate: "20%",
+  },
+  {
+    code: "194G",
+    label: "194G - Lottery Commission",
+    description:
+      "Commission on sale of lottery tickets",
+    rate: "2%",
+  },
+  {
+    code: "194LB",
+    label: "194LB - Infrastructure Debt Fund",
+    description:
+      "Interest on infrastructure debt fund",
+    rate: "5%",
+  },
+  {
+    code: "194LBA-2A",
+    label: "194LBA(2) - Section 10(23FC)(a)",
+    description:
+      "Business trust payment under section 10(23FC)(a)",
+    rate: "5%",
+  },
+  {
+    code: "194LBA-2B",
+    label: "194LBA(2) - Section 10(23FC)(b)",
+    description:
+      "Business trust payment under section 10(23FC)(b)",
+    rate: "10%",
+  },
+  {
+    code: "194LBA-3",
+    label: "194LBA(3) - Section 10(23FCA)",
+    description:
+      "Business trust payment under section 10(23FCA)",
+    rate: "30%",
+  },
+  {
+    code: "194LBB",
+    label: "194LBB - Investment Fund Income",
+    description:
+      "Income from investment fund to unit holder",
+    rate: "30%",
+  },
+  {
+    code: "194LBC",
+    label: "194LBC - Securitisation Trust",
+    description:
+      "Income from securitisation trust",
+    rate: "30%",
+  },
+  {
+    code: "194LC-1",
+    label: "194LC - Long Term Bond / RDB IFSC",
+    description:
+      "Interest on long term bond or RDB listed on IFSC",
+    rate: "4%",
+  },
+  {
+    code: "194LC-2",
+    label: "194LC - Bond issued after 01-04-2023",
+    description:
+      "Specified bonds issued after 01-04-2023",
+    rate: "9%",
+  },
+  {
+    code: "194LD",
+    label: "194LD - Rupee Bond / Govt Securities",
+    description:
+      "Interest on rupee denominated bond / government securities",
+    rate: "5%",
+  },
+  {
+  code: "194N",
+  label: "194N - Cash Withdrawal",
+  description:
+    "Cash withdrawal exceeding ₹1 Crore = 2%; if ITR not filed for preceding 3 years: above ₹20 Lakh to ₹1 Crore = 2%, above ₹1 Crore = 5%",
+  normalThreshold: 10000000, // 1 Crore
+  noITRThreshold: 2000000,   // 20 Lakh
+  highRateThreshold: 10000000, // 1 Crore
+  rate: "2% / 5%",
+},
+
+{
+  code: "194T",
+  label: "194T - Payment to Partner",
+  description:
+    "Salary, remuneration, commission, bonus or interest to partner of firm (w.e.f. 01-04-2025)",
+  threshold: 20000,
+  rate: "10%",
+}
+];
+
+
+
+  
+// ==========================================
+// SECTION 195 (a) to (m)
+// NON-RESIDENT COMPLETE MASTER
+// Exact Rate + Description + Threshold
+// Add inside nonResidentTDSSections
+// ==========================================
+
+const section195Master = [
+  {
+    code: "195-A",
+    label: "195(a) - Investment Income (NRI)",
+    description:
+      "Income in respect of investment made by a Non-Resident Indian Citizen",
+    threshold: 0,
+    rate: 20,
+  },
+
+  {
+    code: "195-B",
+    label: "195(b) - LTCG u/s 115E",
+    description:
+      "Long-term capital gains referred to in Section 115E",
+    threshold: 0,
+    rate: 20,
+  },
+
+  {
+    code: "195-C",
+    label: "195(c) - LTCG u/s 112",
+    description:
+      "Long-term capital gains referred to in Section 112",
+    threshold: 0,
+    rate: 12.5,
+  },
+
+  {
+    code: "195-D",
+    label: "195(d) - LTCG u/s 112A",
+    description:
+      "Long-term capital gains u/s 112A exceeding ₹1,25,000",
+    threshold: 125000,
+    rate: 12.5,
+  },
+
+  {
+    code: "195-E",
+    label: "195(e) - STCG u/s 111A",
+    description:
+      "Short-term capital gains referred to in Section 111A",
+    threshold: 0,
+    rate: 12.5,
+  },
+
+  {
+    code: "195-F",
+    label: "195(f) - Other LTCG",
+    description:
+      "Any other long-term capital gains",
+    threshold: 0,
+    rate: 20,
+  },
+
+  {
+    code: "195-G",
+    label: "195(g) - IFSC Dividend",
+    description:
+      "Dividend from unit in International Financial Services Centre",
+    threshold: 0,
+    rate: 12.5,
+  },
+
+  {
+    code: "195-H",
+    label: "195(h) - Other Dividend",
+    description:
+      "Dividend other than IFSC dividend",
+    threshold: 0,
+    rate: 10,
+  },
+
+  {
+    code: "195-I",
+    label: "195(i) - Foreign Currency Borrowing Interest",
+    description:
+      "Interest on foreign currency borrowings payable by Govt or Indian concern",
+    threshold: 0,
+    rate: 20,
+  },
+
+  {
+    code: "195-J",
+    label: "195(j) - Royalty (Book Copyright / Software)",
+    description:
+      "Royalty for transfer/licensing of specified book copyrights or software u/s 115A",
+    threshold: 0,
+    rate: 20,
+  },
+
+  {
+    code: "195-K",
+    label: "195(k) - Other Royalty",
+    description:
+      "Royalty income other than section 195(j)",
+    threshold: 0,
+    rate: 20,
+  },
+
+  {
+    code: "195-L",
+    label: "195(l) - Fees for Technical Services",
+    description:
+      "Fees for technical services under govt approved agreement",
+    threshold: 0,
+    rate: 20,
+  },
+
+  {
+    code: "195-M",
+    label: "195(m) - Any Other Income",
+    description:
+      "Any other income payable to Non-Resident",
+    threshold: 0,
+    rate: 20,
+  },
+
+  {
+    code: "196A",
+    label: "196A - Units of Non Resident",
+    description:
+      "Income in respect of units of non-resident",
+    rate: "30%",
+  },
+  {
+    code: "196B-1",
+    label: "196B - Income from Units",
+    description:
+      "Income from units under section 115AB",
+    rate: "20%",
+  },
+  {
+    code: "196B-2",
+    label: "196B - LTCG on Units",
+    description:
+      "Long-term capital gain on transfer of units",
+    rate: "12.5%",
+  },
+  {
+    code: "196C-1",
+    label: "196C - Interest / Dividend on Bonds",
+    description:
+      "Interest or dividend on bonds / GDR",
+    rate: "12.5%",
+  },
+  {
+    code: "196C-2",
+    label: "196C - LTCG on Bonds / GDR",
+    description:
+      "Long-term capital gain on transfer of bonds / GDR",
+    rate: "12.5%",
+  },
+  {
+    code: "196D",
+    label: "196D - FII Income",
+    description:
+      "Income of Foreign Institutional Investors",
+    rate: "20%",
+  },
+  {
+    code: "196D-1A",
+    label: "196D(1A) - Specified Fund",
+    description:
+      "Specified fund income under section 115AD",
+    rate: "10%",
+  },
+];
+  const defaultForm = {
+  financialYear: NEW_ACT_FY,
+  residentialStatus: "",
+  recipientCategory: "",
+  panNotAvailable: false,
+  section: "",
+  amount: "",
+  thresholdInput: "",
+  paymentDate: "",
+  sectionSubtype: "default",
+  itrFiled: "yes",
+  yearlyAboveThreshold: "",
+  manualRate: "",
+};
+  const [form, setForm] = useState(defaultForm);
+  const [result, setResult] = useState(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  // Show the page skeleton on first mount, then reveal the calculator.
+  // The timeout is cleaned up if the user navigates away before it completes.
+  useEffect(() => {
+    const loadingTimer = window.setTimeout(() => {
+      setIsLoading(false);
+    }, 650);
+
+    return () => window.clearTimeout(loadingTimer);
+  }, []);
+
+  const handleCalculate = () => {
+    if (isCalculating || isLoading) return;
+
+    setIsCalculating(true);
+
+    // Keep the result panel in its skeleton state briefly so the loading
+    // feedback is visible before the computed summary is shown.
+    window.setTimeout(() => {
+      setIsCalculating(false);
+    }, 650);
+  };
+
+  // FY 2026-27 (Tax Year 2026-27) uses the new section lists;
+  // every other FY keeps the original lists.
+  const isNewActFY = form.financialYear === NEW_ACT_FY;
+
+  const oldTdsSections =
+  form.residentialStatus === "resident"
+    ? residentTDSSections
+    : [...nonResidentTDSSections, ...section195Master];
+
+  const tdsSections = isNewActFY
+    ? form.residentialStatus === "resident"
+      ? residentTDSSections2026
+      : nonResidentTDSSections2026
+    : oldTdsSections;
+
+  // Rows restricted to a Recipient Category (e.g. 1064 — Co-operative
+  // Society only) are hidden from the dropdown until that category is
+  // picked. `tdsSections` itself stays unfiltered so an already-selected
+  // section can still be looked up (see the "clear invalid selection"
+  // effect below).
+  const visibleTdsSections = isNewActFY
+    ? tdsSections.filter((s) => {
+        if (!s.restrictToCategory) return true;
+        if (!form.recipientCategory) return true;
+        return s.restrictToCategory.includes(form.recipientCategory);
+      })
+    : tdsSections;
+  
+  const update = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Changing the section clears the "total paid during the year" answer
+  const handleSectionChange = (value) => {
+    setForm((prev) => ({
+      ...prev,
+      section: value,
+      yearlyAboveThreshold: "",
+      manualRate: "",
+    }));
+  };
+
+  // Section codes and payment dates differ between FY 2026-27 and older FYs,
+  // so clear them when the person switches between the two.
+  const handleFinancialYearChange = (value) => {
+    setForm((prev) => {
+      const switchedRegime =
+        (prev.financialYear === NEW_ACT_FY) !== (value === NEW_ACT_FY);
+
+      return switchedRegime
+        ? {
+            ...prev,
+            financialYear: value,
+            section: "",
+            thresholdInput: "",
+            paymentDate: "",
+            yearlyAboveThreshold: "",
+            manualRate: "",
+          }
+        : { ...prev, financialYear: value };
+    });
+  };
+
+  const selectedSection = useMemo(() => {
+    return tdsSections.find((s) => s.code === form.section);
+  }, [form.section]);
+
+    // ✅ NEW: AUTO THRESHOLD POPULATE (MAIN FIX)
+  useEffect(() => {
+  if (!selectedSection) return;
+
+  if (isResetting) return; // 👈 ADD THIS LINE
+
+  // resolveThreshold2026 falls back to the section's own flat threshold for
+  // every row that has no per-category override, so this is unchanged for
+  // FY 2025-26 and earlier.
+  const threshold = resolveThreshold2026(selectedSection, form.recipientCategory);
+
+  setForm((prev) => ({
+    ...prev,
+    thresholdInput: threshold !== undefined ? threshold : 0,
+  }));
+}, [form.section, isResetting]);
+
+  // Recipient Category changed after a category-dependent FY 2026-27 row
+  // (1029 / 1035) was already selected — refresh the threshold to match.
+  // Guarded to rows that actually have thresholdByCategory, so a manually
+  // edited threshold on any other section is left alone.
+  useEffect(() => {
+    if (!selectedSection) return;
+    if (isResetting) return;
+    if (!selectedSection.thresholdByCategory) return;
+
+    const threshold = resolveThreshold2026(selectedSection, form.recipientCategory);
+
+    setForm((prev) => ({ ...prev, thresholdInput: threshold }));
+  }, [form.recipientCategory]);
+
+  // Recipient Category changed to something that no longer matches a
+  // category-restricted row already selected (e.g. 1064 — Co-operative
+  // Society only) — clear the now-invalid selection.
+  useEffect(() => {
+    if (!selectedSection) return;
+    if (!selectedSection.restrictToCategory) return;
+    if (!form.recipientCategory) return;
+    if (selectedSection.restrictToCategory.includes(form.recipientCategory)) return;
+
+    setForm((prev) => ({
+      ...prev,
+      section: "",
+      thresholdInput: "",
+      manualRate: "",
+      yearlyAboveThreshold: "",
+    }));
+  }, [form.recipientCategory]);
+
+  const getRate = () => {
+    if (!selectedSection) return 0;
+
+    if (
+  form.residentialStatus === "nonResident" &&
+  form.section.startsWith("195-")
+) {
+  const selected195 = section195Master.find(
+    (item) => item.code === form.section
+  );
+
+  if (!selected195) return 0;
+
+  let rate = selected195.rate || 0;
+
+  if (form.panNotAvailable && rate < 20) {
+    rate = 20;
+  }
+
+  return rate;
+}
+
+    let rate = 0;
+
+    if (form.residentialStatus === "nonResident") {
+      rate = Number(selectedSection.nonResidentRate) || 20;
+    } else {
+      switch (form.section) {
+        case "194C":
+          rate =
+            form.recipientCategory === "Individual" ||
+            form.recipientCategory === "HUF"
+              ? 1
+              : 2;
+          break;
+
+        case "194I":
+          rate = form.sectionSubtype === "plant" ? 2 : 10;
+          break;
+
+        case "194J":
+          rate = form.sectionSubtype === "technical" ? 2 : 10;
+          break;
+
+        case "194D":
+          rate =
+            form.recipientCategory === "Individual" ||
+            form.recipientCategory === "HUF"
+              ? 2
+              : 10;
+          break;
+
+        case "194A":
+          rate = 10;
+          break;
+
+        default:
+  rate =
+    Number(
+      String(selectedSection.rate || "")
+        .replace("%", "")
+        .replace("Slab Rates", "0")
+    ) || 0;
+      }
+    }
+
+    if (form.panNotAvailable && rate < 20) {
+      rate = 20;
+    }
+
+    return rate;
+  };
+
+  
+  const calculateTDS = () => {
+  if (!selectedSection) return "0.00";
+
+   // DATE VALIDATION HERE
+  if (
+    form.paymentDate &&
+    (
+      form.paymentDate < "2025-04-01" ||
+      form.paymentDate > "2026-03-31"
+    )
+  ) {
+    return "Invalid Date for FY 2025-26";
+  }
+
+  const amount = Number(form.amount) || 0; 
+if (
+    form.residentialStatus === "nonResident" &&
+    form.section.startsWith("195-")
+  ) {
+    const selected195 = section195Master.find(
+      (item) => item.code === form.section
+    );
+
+    if (!selected195) return "0.00";
+
+    let threshold = selected195.threshold || 0;
+    let rate = selected195.rate || 0;
+
+    if (form.panNotAvailable && rate < 20) {
+      rate = 20;
+    }
+
+    if (amount <= threshold) return "0.00";
+
+    return ((amount * rate) / 100).toFixed(2);
+  }
+
+ // =========================
+  // SECTION 194N
+  // =========================
+  if (form.section === "194N") {
+    const itrFiled = form.itrFiled === "yes";
+    const isCooperativeSociety =
+      form.recipientCategory === "Co-operative Society";
+
+    let tds = 0;
+
+    if (itrFiled) {
+      const threshold =
+        form.residentialStatus === "resident" &&
+        isCooperativeSociety
+          ? 30000000
+          : 10000000;
+
+      if (amount > threshold) {
+        tds = (amount - threshold) * 0.02;
+      }
+    } else {
+      if (amount <= 2000000) {
+        tds = 0;
+      } else if (amount <= 10000000) {
+        tds = (amount - 2000000) * 0.02;
+      } else {
+        tds =
+          (10000000 - 2000000) * 0.02 +
+          (amount - 10000000) * 0.05;
+      }
+    }
+
+    return tds.toFixed(2);
+  }
+ // =========================
+  // SECTION 194T
+  // =========================
+  if (form.section === "194T") {
+    const threshold = 20000;
+
+    if (amount <= threshold) return "0.00";
+
+    return ((amount * 10) / 100).toFixed(2);
+  }
+
+ // =========================
+  // NORMAL TDS LOGIC
+  // =========================
+   
+    const threshold = Number(form.thresholdInput) || selectedSection?.threshold || 0;
+
+    if (amount <= threshold) {
+      return 0;
+    }
+
+    const rate = getRate();
+    return ((amount * rate) / 100).toFixed(2);
+   
+  };
+
+  // ==========================================================
+  // FY 2026-27 (Tax Year 2026-27) — separate calculation
+  // Same rules as FY 2025-26; FY 2026-27 rows point to the old
+  // section logic (194C / 194D / 194N / 194T) through `logic`.
+  // ==========================================================
+  // Rate for FY 2026-27: picked from the chart's own "ind" (Individual/HUF)
+  // / "other" (other than Individual/HUF) columns by Recipient Category —
+  // same idea as the FY 2025-26 194C / 194D category split, applied to
+  // every row. A null result means the row genuinely does not apply to the
+  // selected category (chart shows "-"), so no TDS is calculated.
+  // Manual-rate rows (see MANUAL_RATE_CODES) use the rate typed in instead.
+  const getRate2026 = () => {
+    if (!selectedSection) return null;
+
+    const logicCode = selectedSection.logic || form.section;
+    const isIndOrHuf =
+      form.recipientCategory === "Individual" || form.recipientCategory === "HUF";
+
+    let rate = null;
+
+    if (selectedSection.manualRateRequired) {
+      rate =
+        form.manualRate !== "" && form.manualRate !== undefined
+          ? Number(form.manualRate)
+          : null;
+    } else if (selectedSection.rateMatrix) {
+      rate = resolveRateMatrix2026(
+        selectedSection,
+        form.residentialStatus,
+        form.recipientCategory
+      );
+    } else {
+      switch (logicCode) {
+        case "194C":
+          rate = isIndOrHuf ? 1 : 2;
+          break;
+
+        case "194D":
+          rate = isIndOrHuf ? 2 : 10;
+          break;
+
+        default:
+          rate = isIndOrHuf ? selectedSection.indRate : selectedSection.otherRate;
+      }
+    }
+
+    if (rate !== null && form.panNotAvailable && rate < 20) {
+      rate = 20;
+    }
+
+    return rate;
+  };
+
+  const calculateTDS2026 = () => {
+    if (!selectedSection) return "0.00";
+
+    if (!form.paymentDate) {
+      return ENTER_DATE_MESSAGE_2026;
+    }
+
+    if (form.paymentDate < "2026-04-01" || form.paymentDate > "2027-03-31") {
+      return "Invalid Date for FY 2026-27";
+    }
+
+    const amount = Number(form.amount) || 0;
+    const logicCode = selectedSection.logic || form.section;
+
+    // 194N / 194NC
+    if (logicCode === "194N") {
+      const itrFiled = form.itrFiled === "yes";
+      const isCooperativeSociety = selectedSection.cooperative === true;
+
+      let tds = 0;
+
+      if (itrFiled) {
+        const threshold =
+          form.residentialStatus === "resident" && isCooperativeSociety
+            ? 30000000
+            : 10000000;
+
+        if (amount > threshold) {
+          tds = (amount - threshold) * 0.02;
+        }
+      } else {
+        if (amount <= 2000000) {
+          tds = 0;
+        } else if (amount <= 10000000) {
+          tds = (amount - 2000000) * 0.02;
+        } else {
+          tds =
+            (10000000 - 2000000) * 0.02 +
+            (amount - 10000000) * 0.05;
+        }
+      }
+
+      return tds.toFixed(2);
+    }
+
+    // Manual-rate row, rate not entered yet
+    if (selectedSection.manualRateRequired && form.manualRate === "") {
+      return ENTER_RATE_MESSAGE_2026;
+    }
+
+    const rate = getRate2026();
+
+    // Section does not apply to the selected Recipient Category (chart
+    // shows "-" for that column)
+    if (rate === null) {
+      return NOT_APPLICABLE_MESSAGE_2026;
+    }
+
+    // Normal TDS logic (threshold can depend on Recipient Category)
+    const threshold =
+      Number(form.thresholdInput) ||
+      resolveThreshold2026(selectedSection, form.recipientCategory) ||
+      0;
+
+    if (amount <= threshold) {
+      return 0;
+    }
+
+    return ((amount * rate) / 100).toFixed(2);
+  };
+
+  // What the screen shows: FY 2026-27 uses the new functions,
+  // every other FY uses the original ones above.
+  const displayRate = () => (isNewActFY ? getRate2026() : getRate());
+
+  // ==========================================================
+  // Amount paid / credited at or below the threshold (all years)
+  // Ask: is the total paid/credited during the year above the
+  // threshold?  Yes -> TDS on the paid amount at the applicable rate.
+  // No -> "TDS is not deductible".
+  // 194N / 194NC keep their own ITR-based slab logic and are excluded.
+  // ==========================================================
+  const NOT_DEDUCTIBLE_MESSAGE = "TDS is not deductible";
+  const NOT_APPLICABLE_MESSAGE_2026 =
+    "Not applicable for this Recipient Category";
+  const ENTER_RATE_MESSAGE_2026 = "Enter the applicable rate to calculate";
+  const ENTER_DATE_MESSAGE_2026 = "Enter Payment Date to calculate";
+
+  const getEffectiveThreshold = () => {
+    if (!selectedSection) return null;
+
+    const logicCode = selectedSection.logic || form.section;
+
+    if (logicCode === "194N") return null;
+    if (logicCode === "194T") return 20000;
+
+    if (
+      form.residentialStatus === "nonResident" &&
+      form.section.startsWith("195-")
+    ) {
+      return selectedSection.threshold || 0;
+    }
+
+    if (isNewActFY) {
+      return (
+        Number(form.thresholdInput) ||
+        resolveThreshold2026(selectedSection, form.recipientCategory) ||
+        0
+      );
+    }
+
+    return Number(form.thresholdInput) || selectedSection.threshold || 0;
+  };
+
+  const enteredAmount = Number(form.amount) || 0;
+  const effectiveThreshold = getEffectiveThreshold();
+
+  const showYearlyThresholdQuestion =
+    effectiveThreshold !== null &&
+    enteredAmount > 0 &&
+    enteredAmount <= effectiveThreshold;
+
+  const displayTDS = () => {
+    if (isNewActFY && !form.paymentDate) {
+      return ENTER_DATE_MESSAGE_2026;
+    }
+
+    const regular = isNewActFY ? calculateTDS2026() : calculateTDS();
+
+    if (typeof regular === "string" && regular.startsWith("Invalid Date")) {
+      return regular;
+    }
+
+    if (!showYearlyThresholdQuestion) return regular;
+
+    if (form.yearlyAboveThreshold === "no") return NOT_DEDUCTIBLE_MESSAGE;
+
+    if (form.yearlyAboveThreshold === "yes") {
+      const logicCode = selectedSection.logic || form.section;
+      const rate = logicCode === "194T" ? 10 : displayRate();
+
+      if (rate === null || rate === undefined || Number.isNaN(rate)) {
+        return isNewActFY && selectedSection.manualRateRequired
+          ? ENTER_RATE_MESSAGE_2026
+          : NOT_APPLICABLE_MESSAGE_2026;
+      }
+
+      return ((enteredAmount * rate) / 100).toFixed(2);
+    }
+
+    return "0.00";
+  };
+
+  const formatTDS = (value) =>
+    Number.isNaN(Number(value)) ? value : `₹ ${value}`;
+
+  // "Applicable Rate" display: FY 2026-27 rates can legitimately be null
+  // (section not applicable to the selected category, or a manual rate not
+  // entered yet).
+  const formatRate = (value) =>
+    value === null || value === undefined || Number.isNaN(Number(value))
+      ? "N/A"
+      : `${value}%`;
+
+  const resetForm = () => {
+  setForm(defaultForm);
+  setIsCalculating(false);
+};
+
+return (
+  <div className="tds-modern-page">
+    <div className="tds-modern-container">
+   <div className="business-code-back-wrapper">
+          <button
+            type="button"
+            className="business-code-back-btn"
+            onClick={() => navigate(-1)}
+          >
+            <span>←</span>
+            Back
+          </button>
+        </div>
+      {isLoading ? (
+        <div className="tds-page-skeleton" role="status" aria-label="Loading TDS calculator">
+          <div className="tds-skeleton-header">
+            <div className="tds-skeleton-heading">
+              <Skeleton variant="text" width="150px" height={20} />
+              <Skeleton variant="text" width="min(420px, 80%)" height={48} />
+              <Skeleton variant="text" width="min(520px, 90%)" height={24} />
+            </div>
+            <Skeleton variant="rounded" width={150} height={66} />
+          </div>
+
+          <div className="tds-skeleton-grid">
+            <div className="tds-skeleton-card">
+              <Skeleton variant="text" width="220px" height={30} />
+              <Skeleton variant="text" width="300px" height={20} />
+              <div className="tds-skeleton-fields">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <div className="tds-skeleton-field" key={index}>
+                    <Skeleton variant="text" width="46%" height={20} />
+                    <Skeleton variant="rounded" width="100%" height={46} />
+                  </div>
+                ))}
+              </div>
+              <div className="tds-skeleton-actions">
+                <Skeleton variant="rounded" width={104} height={42} />
+                <Skeleton variant="rounded" width={148} height={42} />
+              </div>
+            </div>
+            <div className="tds-skeleton-card tds-skeleton-result">
+              <Skeleton variant="text" width="62%" height={24} />
+              <Skeleton variant="rounded" width="100%" height={132} />
+              {Array.from({ length: 5 }).map((_, index) => (
+                <Skeleton key={index} variant="rounded" width="100%" height={42} />
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+      <>
+      {/* HEADER */}
+      <div className="tds-modern-header">
+        <div>
+          <p className="tds-modern-kicker">Income Tax Utility</p>
+          <h1>TDS Calculator</h1>
+          <p>
+            Calculate Tax Deducted at Source with section-wise threshold and rate.
+          </p>
+        </div>
+
+        <div className="tds-modern-badge">
+          <span>Financial Year</span>
+          <strong>
+            {form.financialYear
+              ? getFinancialYearLabel(form.financialYear)
+              : "Not Selected"}
+          </strong>
+        </div>
+      </div>
+
+      <div className="tds-modern-grid">
+
+        {/* LEFT FORM */}
+        <div className="tds-modern-card">
+          <div className="tds-section-title">
+            <h2>Deduction Details</h2>
+            <p>Fill payment and deductee details for TDS computation</p>
+          </div>
+
+          <div className="tds-form-grid">
+
+            <div className="tds-field">
+              <label>Financial Year <span>*</span></label>
+              <TextField select fullWidth size="small" value={form.financialYear} onChange={(e) => handleFinancialYearChange(e.target.value)} className="tds-mui-field">
+                <MenuItem value="">Select FY</MenuItem>
+                {financialYears.map((fy) => <MenuItem key={fy} value={fy}>{getFinancialYearLabel(fy)}</MenuItem>)}
+              </TextField>
+            </div>
+
+            <div className="tds-field">
+              <label>Residential Status <span>*</span></label>
+              <TextField select fullWidth size="small" value={form.residentialStatus || ""} onChange={(e) => update("residentialStatus", e.target.value)} className="tds-mui-field">
+                <MenuItem value="">Select Residential Status</MenuItem>
+                <MenuItem value="resident">Resident</MenuItem>
+                <MenuItem value="nonResident">Non-Resident</MenuItem>
+              </TextField>
+            </div>
+
+            <div className="tds-field">
+              <label>Recipient Category <span>*</span></label>
+              <TextField select fullWidth size="small" value={form.recipientCategory} onChange={(e) => update("recipientCategory", e.target.value)} className="tds-mui-field">
+                <MenuItem value="">Select Category</MenuItem>
+                {recipientCategories.map((category) => <MenuItem key={category} value={category}>{category}</MenuItem>)}
+              </TextField>
+            </div>
+
+            {isNewActFY ? (
+              <>
+                <div className="tds-field">
+                  <label>Section <span>*</span></label>
+                  <TdsWrapSelect
+                    value={form.section}
+                    onChange={handleSectionChange}
+                    options={visibleTdsSections}
+                    getLabel={(s) => s.sectionText}
+                    placeholder="Select Section"
+                  />
+                </div>
+
+                <div className="tds-field">
+                  <label>Description <span>*</span></label>
+                  <TdsWrapSelect
+                    value={form.section}
+                    onChange={handleSectionChange}
+                    options={visibleTdsSections}
+                    getLabel={(s) => s.description}
+                    placeholder="Select Description"
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="tds-field">
+                <label>Section / Description <span>*</span></label>
+                <TextField select fullWidth size="small" value={form.section} onChange={(e) => handleSectionChange(e.target.value)} className="tds-mui-field">
+                  <MenuItem value="">Select Section</MenuItem>
+                  {tdsSections.map((section) => <MenuItem key={section.code} value={section.code}>{`${section.code} - ${section.label}`}</MenuItem>)}
+                </TextField>
+              </div>
+            )}
+
+            <div className="tds-field">
+              <label>Amount Paid / Credited <span>*</span></label>
+              <TdsNumberField
+                label="Amount Paid / Credited"
+                value={form.amount}
+                onChange={(value) => update("amount", value)}
+                placeholder="Enter amount"
+                step={1}
+              />
+            </div>
+
+            <div className="tds-field">
+              <label>Payment Date <span>*</span></label>
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DatePicker
+                  value={form.paymentDate ? dayjs(form.paymentDate) : null}
+                  onChange={(newValue) =>
+                    update("paymentDate", newValue && newValue.isValid()
+                      ? newValue.format("YYYY-MM-DD")
+                      : "")
+                  }
+                  minDate={dayjs(isNewActFY ? "2026-04-01" : "2025-04-01")}
+                  maxDate={dayjs(isNewActFY ? "2027-03-31" : "2026-03-31")}
+                  format="DD/MM/YYYY"
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                      placeholder: "DD/MM/YYYY",
+                      className: "tds-mui-field",
+                    },
+                    popper: { className: "tds-date-popper" },
+                  }}
+                />
+              </LocalizationProvider>
+            </div>
+
+            <div className="tds-field">
+              <label>Threshold Limit</label>
+              <TdsNumberField
+                label="Threshold Limit"
+                value={form.thresholdInput}
+                onChange={(value) => update("thresholdInput", value)}
+                placeholder="Threshold limit"
+                step={1}
+              />
+              {isNewActFY && selectedSection?.thresholdNote && (
+                <p className="tds-threshold-note">
+                  {selectedSection.thresholdNote}
+                </p>
+              )}
+            </div>
+
+            {isNewActFY && selectedSection?.manualRateRequired && (
+              <div className="tds-field">
+                <label>
+                  Applicable Rate (%) <span>*</span>
+                </label>
+                <TdsNumberField
+                  label="Applicable Rate (%)"
+                  value={form.manualRate}
+                  onChange={(value) => update("manualRate", value)}
+                  placeholder="Enter applicable rate"
+                  step={0.01}
+                />
+              </div>
+            )}
+
+            <div className="tds-field">
+              <label>ITR Filing Status</label>
+              <TextField select fullWidth size="small" value={form.itrFiled} onChange={(e) => update("itrFiled", e.target.value)} className="tds-mui-field">
+                <MenuItem value="yes">ITR Filed</MenuItem>
+                <MenuItem value="no">ITR Not Filed (206AB)</MenuItem>
+              </TextField>
+            </div>
+
+            {showYearlyThresholdQuestion && (
+              <div className="tds-field tds-field-wide">
+                <label>
+                  Whether total amount paid / credited during the year is more
+                  than above threshold limit? <span>*</span>
+                </label>
+                <TextField select fullWidth size="small" value={form.yearlyAboveThreshold} onChange={(e) => update("yearlyAboveThreshold", e.target.value)} className="tds-mui-field">
+                  <MenuItem value="">Select</MenuItem>
+                  <MenuItem value="yes">Yes</MenuItem>
+                  <MenuItem value="no">No</MenuItem>
+                </TextField>
+              </div>
+            )}
+
+            <div className="tds-check-box">
+              <input
+                type="checkbox"
+                checked={form.panNotAvailable}
+                onChange={(e) => update("panNotAvailable", e.target.checked)}
+              />
+              <div>
+                <strong>PAN not available</strong>
+                <p>Higher rate may apply under Section 206AA.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="tds-modern-actions">
+            <Button variant="outlined" onClick={resetForm} className="tds-reset-button">Reset</Button>
+            <Button variant="contained" onClick={handleCalculate} disabled={isCalculating} className="tds-calculate-button">
+              {isCalculating ? <><CircularProgress size={18} color="inherit" /> <span>Calculating...</span></> : "Calculate TDS"}
+            </Button>
+          </div>
+        </div>
+
+        {/* RIGHT RESULT PANEL */}
+        <div className="tds-result-panel">
+          {isCalculating ? (
+            <div className="tds-result-skeleton" aria-label="Calculating TDS">
+              <Skeleton variant="rounded" height={142} />
+              <div className="tds-result-skeleton-list">
+                {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} variant="rounded" height={42} />)}
+              </div>
+            </div>
+          ) : (
+          <>
+          <div className="tds-result-head">
+            <p>Computation Summary</p>
+            <h2>{formatTDS(displayTDS())}</h2>
+            <span>Total TDS Amount</span>
+          </div>
+
+          <div className="tds-result-list">
+            <div className="tds-result-item">
+              <span>Applicable Rate</span>
+              <strong>{formatRate(displayRate())}</strong>
+            </div>
+
+            <div className="tds-result-item">
+              <span>Threshold Limit</span>
+              <strong>₹ {form.thresholdInput || 0}</strong>
+            </div>
+
+            <div className="tds-result-item">
+              <span>Amount Paid / Credited</span>
+              <strong>₹ {form.amount || 0}</strong>
+            </div>
+
+            <div className="tds-result-item tds-result-item-wrap">
+              <span>Selected Section</span>
+              <strong>{selectedSection?.sectionText || form.section || "-"}</strong>
+            </div>
+
+            <div className="tds-result-item final">
+              <span>Final TDS</span>
+              <strong>{formatTDS(displayTDS())}</strong>
+            </div>
+          </div>
+          </>
+          )}
+        </div>
+      </div>
+      </>
+      )}
+    </div>
+
+    <style>{`
+      .tds-modern-page {
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top left, rgba(37, 99, 235, 0.25), transparent 32%),
+          linear-gradient(135deg, #07111f 0%, #0f172a 45%, #111827 100%);
+        color: #e5e7eb;
+        padding: 34px;
+        font-family: Inter, Arial, sans-serif;
+      }
+
+      .tds-modern-container {
+        max-width: 1250px;
+        margin: 0 auto;
+      }
+
+      .tds-modern-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 28px;
+        padding: 26px;
+        border-radius: 24px;
+        background: rgba(15, 23, 42, 0.86);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      .tds-modern-kicker {
+        color: #60a5fa;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-size: 12px;
+        font-weight: 800;
+        margin: 0 0 8px;
+      }
+
+      .tds-modern-header h1 {
+        font-size: 36px;
+        line-height: 1.1;
+        margin: 0;
+        color: #ffffff;
+      }
+
+      .tds-modern-header p {
+        margin: 10px 0 0;
+        color: #94a3b8;
+        font-size: 15px;
+      }
+
+      .tds-modern-badge {
+        min-width: 190px;
+        padding: 18px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, rgba(37,99,235,0.18), rgba(14,165,233,0.12));
+        border: 1px solid rgba(96, 165, 250, 0.28);
+        text-align: center;
+      }
+
+      .tds-modern-badge span {
+        display: block;
+        color: #93c5fd;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 5px;
+      }
+
+      .tds-modern-badge strong {
+        color: #ffffff;
+        font-size: 20px;
+      }
+
+      .tds-modern-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 26px;
+        align-items: start;
+      }
+
+      .tds-modern-card,
+      .tds-result-panel {
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 24px;
+        box-shadow: 0 22px 60px rgba(0, 0, 0, 0.32);
+      }
+
+      .tds-modern-card {
+        padding: 26px;
+      }
+
+      .tds-section-title {
+        margin-bottom: 24px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      }
+
+      .tds-section-title h2 {
+        margin: 0;
+        color: #ffffff;
+        font-size: 22px;
+      }
+
+      .tds-section-title p {
+        margin: 7px 0 0;
+        color: #94a3b8;
+        font-size: 14px;
+      }
+
+      .tds-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .tds-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .tds-field label {
+        color: #cbd5e1;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .tds-field label span {
+        color: #f87171;
+      }
+
+      .tds-field input,
+      .tds-field select {
+        width: 100%;
+        height: 46px;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        background: rgba(2, 6, 23, 0.48);
+        color: #ffffff;
+        padding: 0 14px;
+        outline: none;
+        font-size: 14px;
+        transition: all 0.2s ease;
+      }
+
+      .tds-field input::placeholder {
+        color: #64748b;
+      }
+
+      .tds-field input:focus,
+      .tds-field select:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.14);
+        background: rgba(15, 23, 42, 0.95);
+      }
+
+      .tds-field option {
+        background: #0f172a;
+        color: #ffffff;
+      }
+
+      .tds-field-wide {
+        grid-column: span 2;
+      }
+
+      .tds-threshold-note {
+        margin: 6px 2px 0;
+        color: #93c5fd;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .tds-wrap-select {
+        position: relative;
+      }
+
+      .tds-wrap-select-trigger {
+        width: 100%;
+        height: 46px;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        background: rgba(2, 6, 23, 0.48);
+        color: #ffffff;
+        padding: 0 14px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        cursor: pointer;
+        text-align: left;
+        transition: all 0.2s ease;
+      }
+
+      .tds-wrap-select-trigger span:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+      }
+
+      .tds-wrap-select-trigger:hover,
+      .tds-wrap-select-trigger.is-open {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.14);
+        background: rgba(15, 23, 42, 0.95);
+      }
+
+      .tds-wrap-select-arrow {
+        flex-shrink: 0;
+        color: #60a5fa;
+        font-size: 11px;
+      }
+
+      .tds-wrap-select-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        width: 100%;
+        max-height: 320px;
+        overflow-y: auto;
+        background: #0f172a;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        border-radius: 14px;
+        box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+        z-index: 60;
+        padding: 6px;
+      }
+
+      .tds-wrap-select-option {
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 13px;
+        line-height: 1.45;
+        color: #e5e7eb;
+        white-space: normal;
+        word-break: break-word;
+        cursor: pointer;
+      }
+
+      .tds-wrap-select-option:hover {
+        background: rgba(96, 165, 250, 0.14);
+      }
+
+      .tds-wrap-select-option.is-selected {
+        background: rgba(37, 99, 235, 0.32);
+        color: #ffffff;
+        font-weight: 700;
+      }
+
+      .tds-check-box {
+        grid-column: span 2;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(96, 165, 250, 0.18);
+      }
+
+      .tds-check-box input {
+        width: 20px;
+        height: 20px;
+        accent-color: #3b82f6;
+      }
+
+      .tds-check-box strong {
+        color: #ffffff;
+        font-size: 14px;
+      }
+
+      .tds-check-box p {
+        margin: 4px 0 0;
+        color: #94a3b8;
+        font-size: 12px;
+      }
+
+      .tds-modern-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 14px;
+        margin-top: 26px;
+      }
+
+      .tds-btn-secondary {
+        height: 44px;
+        padding: 0 24px;
+        border-radius: 14px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: rgba(148, 163, 184, 0.12);
+        color: #cbd5e1;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+      }
+
+      .tds-btn-secondary:hover {
+        background: rgba(248, 113, 113, 0.16);
+        color: #fecaca;
+        border-color: rgba(248, 113, 113, 0.32);
+      }
+
+      .tds-result-panel {
+        overflow: hidden;
+        position: sticky;
+        top: 22px;
+      }
+
+      .tds-result-head {
+        padding: 26px;
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.32), rgba(14, 165, 233, 0.16));
+        border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      .tds-result-head p {
+        margin: 0;
+        color: #bfdbfe;
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+      }
+
+      .tds-result-head h2 {
+        margin: 14px 0 4px;
+        color: #ffffff;
+        font-size: 34px;
+        word-break: break-word;
+      }
+
+      .tds-result-head span {
+        color: #93c5fd;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .tds-result-list {
+        padding: 18px;
+      }
+
+      .tds-result-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 15px 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .tds-result-item:last-child {
+        border-bottom: none;
+      }
+
+      .tds-result-item span {
+        color: #94a3b8;
+        font-size: 14px;
+      }
+
+      .tds-result-item strong {
+        color: #ffffff;
+        font-size: 16px;
+        text-align: right;
+        word-break: break-word;
+      }
+
+      .tds-result-item.final {
+        margin-top: 10px;
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(34, 197, 94, 0.24);
+        background: rgba(34, 197, 94, 0.08);
+      }
+
+      .tds-result-item.final span {
+        color: #bbf7d0;
+        font-weight: 800;
+      }
+
+      .tds-result-item.final strong {
+        color: #86efac;
+        font-size: 20px;
+      }
+
+      .tds-result-item-wrap {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+
+      .tds-result-item-wrap strong {
+        max-width: 365px;
+        width: 100%;
+        text-align: left;
+        white-space: normal;
+        word-break: break-word;
+      }
+
+      input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
+      }
+
+      @media (max-width: 1050px) {
+        .tds-modern-page {
+          padding: 20px;
+        }
+
+        .tds-modern-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .tds-modern-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .tds-result-panel {
+          position: static;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .tds-form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .tds-check-box,
+        .tds-field-wide {
+          grid-column: span 1;
+        }
+
+        .tds-modern-actions {
+          flex-direction: column;
+        }
+
+        .tds-btn-secondary {
+          width: 100%;
+        }
+      }
+        /* BACK BUTTON */
+
+        .business-code-back-wrapper {
+         
+          margin-bottom: 20px;
+        }
+
+        .business-code-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          height: 46px;
+          padding: 0 20px;
+          border-radius: 14px;
+          border: 1px solid rgba(148, 163, 184, 0.22);
+          background: rgba(15, 23, 42, 0.9);
+          color: #cbd5e1;
+          font-size: 14px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .business-code-back-btn:hover {
+          border-color: #60a5fa;
+          color: #ffffff;
+          background: rgba(37, 99, 235, 0.12);
+        }
+
+        .business-code-back-btn span {
+          font-size: 18px;
+        }
+
+
+      /* Palette-aligned TDS calculator theme */
+      .tds-modern-page {
+        background: linear-gradient(145deg, #E3FDFD 0%, #CBF1F5 52%, #A6E3E9 100%);
+        color: #173B3E;
+      }
+      .tds-modern-header,
+      .tds-modern-card,
+      .tds-result-panel {
+        background: rgba(255,255,255,.88);
+        border: 1px solid rgba(113,201,206,.55);
+        box-shadow: 0 18px 48px rgba(22,78,82,.12);
+        color: #173B3E;
+      }
+      .tds-modern-header h1,
+      .tds-section-title h2,
+      .tds-check-box strong { color: #164E52; }
+      .tds-modern-header p,
+      .tds-section-title p,
+      .tds-check-box p { color: #52777A; }
+      .tds-modern-kicker,
+      .tds-modern-badge span,
+      .tds-threshold-note { color: #247D82; }
+      .tds-modern-badge {
+        background: linear-gradient(135deg, #E3FDFD, #CBF1F5);
+        border-color: #A6E3E9;
+      }
+      .tds-modern-badge strong { color: #164E52; }
+      .tds-field label { color: #28595C; }
+      .tds-field input,
+      .tds-field select,
+      .tds-wrap-select-trigger {
+        background: #fff;
+        border: 1px solid #A6E3E9;
+        color: #173B3E;
+      }
+      .tds-field input:focus,
+      .tds-field select:focus,
+      .tds-wrap-select-trigger:hover,
+      .tds-wrap-select-trigger.is-open {
+        border-color: #71C9CE;
+        box-shadow: 0 0 0 4px rgba(113,201,206,.2);
+        background: #fff;
+      }
+      .tds-field option { background: #fff; color: #173B3E; }
+      .tds-wrap-select-menu { background: #fff; border-color: #A6E3E9; box-shadow: 0 16px 36px rgba(22,78,82,.16); }
+      .tds-wrap-select-option { color: #28595C; }
+      .tds-wrap-select-option:hover,
+      .tds-wrap-select-option.is-selected { background: #E3FDFD; color: #164E52; }
+      .tds-wrap-select-arrow { color: #247D82; }
+      .tds-check-box { background: #E3FDFD; border-color: #A6E3E9; }
+      .tds-check-box input { accent-color: #329DA3; }
+      .tds-btn-secondary,
+      .tds-reset-button.MuiButton-root {
+        color: #247D82;
+        border-color: #A6E3E9;
+        background: #fff;
+      }
+      .tds-btn-secondary:hover,
+      .tds-reset-button.MuiButton-root:hover { background: #E3FDFD; border-color: #71C9CE; color: #164E52; }
+      .tds-calculate-button.MuiButton-root {
+        min-height: 44px;
+        padding: 0 24px;
+        border-radius: 14px;
+        background: #329DA3;
+        color: #fff;
+        font-weight: 800;
+        text-transform: none;
+        box-shadow: none;
+        display: inline-flex;
+        gap: 10px;
+      }
+      .tds-calculate-button.MuiButton-root:hover { background: #247D82; box-shadow: 0 8px 18px rgba(36,125,130,.2); }
+      .business-code-back-btn {
+        background: #fff;
+        border: 1px solid #A6E3E9;
+        color: #164E52;
+      }
+      .business-code-back-btn:hover { border-color: #71C9CE; color: #164E52; background: #E3FDFD; }
+      .tds-result-head {
+        background: linear-gradient(135deg, #71C9CE, #A6E3E9);
+        border-bottom-color: #A6E3E9;
+      }
+      .tds-result-head p,
+      .tds-result-head span { color: #164E52; }
+      .tds-result-head h2 { color: #123F42; }
+      .tds-result-item { border-bottom-color: rgba(113,201,206,.3); }
+      .tds-result-item span { color: #52777A; }
+      .tds-result-item strong { color: #164E52; }
+      .tds-result-item.final {
+        background: #E3FDFD;
+        border-color: #A6E3E9;
+      }
+      .tds-result-item.final span,
+      .tds-result-item.final strong { color: #17676C; }
+      .tds-number-root { width: 100%; }
+      .tds-number-group {
+        display: flex;
+        align-items: stretch;
+        width: 100%;
+        min-height: 42px;
+        overflow: hidden;
+        border: 1px solid #B9DDE0;
+        border-radius: 13px;
+        background: #FFFFFF;
+        transition: border-color .18s ease, box-shadow .18s ease;
+      }
+      .tds-number-group:focus-within {
+        border-color: #164E52;
+        box-shadow: 0 0 0 3px rgba(113,201,206,.22);
+      }
+      .tds-number-input {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        height: 42px;
+        padding: 0 13px;
+        border: 0;
+        outline: 0;
+        color: #173B3E;
+        background: transparent;
+        font: inherit;
+        font-size: 14px;
+      }
+      .tds-number-input::placeholder { color: #8AAEB1; opacity: 1; }
+      .tds-number-steppers {
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid #D9ECEE;
+      }
+      .tds-number-step {
+        display: grid;
+        width: 34px;
+        flex: 1;
+        place-items: center;
+        padding: 0;
+        border: 0;
+        background: #E3FDFD;
+        color: #164E52;
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+      }
+      .tds-number-step + .tds-number-step {
+        border-top: 1px solid #D9ECEE;
+      }
+      .tds-number-step:hover { background: #CBF1F5; }
+      .tds-number-step:disabled { opacity: .4; cursor: not-allowed; }
+      .tds-mui-field .MuiOutlinedInput-root {
+        min-height: 46px;
+        border-radius: 14px;
+        background: #fff;
+        color: #173B3E;
+      }
+      .tds-mui-field .MuiOutlinedInput-notchedOutline { border-color: #A6E3E9; }
+      .tds-mui-field .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline,
+      .tds-mui-field .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline { border-color: #71C9CE; }
+      .tds-mui-field .MuiSvgIcon-root { color: #247D82; }
+      .tds-mui-field input { color: #173B3E; }
+      .tds-date-popper .MuiPaper-root { border: 1px solid #A6E3E9; }
+      .tds-page-skeleton {
+        display: grid;
+        gap: 22px;
+        animation: tds-skeleton-fade-in .2s ease-out;
+      }
+      .tds-skeleton-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        min-height: 142px;
+        padding: 26px;
+        border: 1px solid #CBF1F5;
+        border-radius: 24px;
+        background: #FFFFFF;
+        box-shadow: 0 8px 28px rgba(23, 59, 62, .05);
+      }
+      .tds-skeleton-heading { flex: 1; min-width: 0; }
+      .tds-skeleton-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(300px, .85fr);
+        gap: 22px;
+        align-items: start;
+      }
+      .tds-skeleton-card {
+        display: grid;
+        gap: 14px;
+        min-width: 0;
+        padding: 24px;
+        border: 1px solid #CBF1F5;
+        border-radius: 22px;
+        background: #FFFFFF;
+        box-shadow: 0 8px 28px rgba(23, 59, 62, .05);
+      }
+      .tds-skeleton-fields {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px 16px;
+        margin-top: 8px;
+      }
+      .tds-skeleton-field { display: grid; gap: 5px; min-width: 0; }
+      .tds-skeleton-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .tds-skeleton-result { gap: 14px; }
+      .tds-result-skeleton { padding: 18px; }
+      .tds-result-skeleton-list { display: grid; gap: 12px; margin-top: 18px; }
+      /* Light skeleton palette: Color Hunt #E3FDFD #CBF1F5 #A6E3E9 #71C9CE */
+      .tds-result-skeleton .MuiSkeleton-root,
+      .tds-page-skeleton .MuiSkeleton-root {
+        background-color: #CBF1F5;
+        opacity: 1;
+      }
+      .tds-page-skeleton .MuiSkeleton-rounded,
+      .tds-result-skeleton .MuiSkeleton-rounded {
+        background-color: #CBF1F5;
+      }
+      .tds-page-skeleton .MuiSkeleton-root::after,
+      .tds-result-skeleton .MuiSkeleton-root::after {
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(227, 253, 253, .95),
+          transparent
+        );
+      }
+      .tds-page-skeleton .MuiSkeleton-text,
+      .tds-result-skeleton .MuiSkeleton-text {
+        transform-origin: left center;
+      }
+      @keyframes tds-skeleton-fade-in {
+        from { opacity: .65; transform: translateY(3px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @media (max-width: 900px) {
+        .tds-skeleton-grid { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 600px) {
+        .tds-skeleton-header { align-items: flex-start; padding: 18px; }
+        .tds-skeleton-header > .MuiSkeleton-root { display: none; }
+        .tds-skeleton-card { padding: 18px; }
+        .tds-skeleton-fields { grid-template-columns: 1fr; gap: 12px; }
+        .tds-skeleton-actions { flex-direction: column; }
+        .tds-skeleton-actions .MuiSkeleton-root { width: 100% !important; }
+      }
+      @media (max-width: 680px) {
+        .tds-modern-page { padding: 16px; }
+        .tds-modern-actions { flex-direction: column-reverse; }
+        .tds-modern-actions .MuiButton-root { width: 100%; }
+      }
+    `}</style>
+  </div>
+);
+}

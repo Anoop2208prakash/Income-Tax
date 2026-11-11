@@ -1,0 +1,275 @@
+
+import { Routes, Route } from "react-router-dom";
+
+import Layout from "./components/Layout";
+import ScrollToTop from "./components/ScrollToTop";
+
+// Main Pages
+import HomePage from "./pages/HomePage";
+import AboutPage from "./pages/AboutPage";
+import ActsLawsPage from "./pages/ActsLawsPage";
+import TaxCalculatorPage from "./pages/TaxCalculatorPage";
+
+// UI Components
+import UIComponentsPage from "./pages/UIComponentsPage";
+
+// Knowledge Base
+import BusinessCodeListPage from "./pages/KnowledgeBase/BusinessCodeListPage";
+import FormsMappingPage from "./pages/KnowledgeBase/FormsMappingPage";
+import TDSRateChartPage from "./pages/KnowledgeBase/TDSRateChartPage";
+import TCSRateChartPage from "./pages/KnowledgeBase/TCSRateChartPage";
+import AOP_Tax_Treatment_Situations from "./pages/KnowledgeBase/AOP_Tax_Treatment_Situations";
+import Form_10IEANotes from "./pages/KnowledgeBase/Form_10IEANotes";
+import Tax_Calendar from "./pages/KnowledgeBase/Tax_Calendar";
+import FinancialRatiosDisclosure from "./pages/KnowledgeBase/FinancialRatiosDisclosure";
+import E_Tutorial from "./pages/KnowledgeBase/E_Tutorial";
+
+// Tax Calculators
+import AdvanceTaxCalculator from "./pages/AdvanceTaxCalculator";
+import HRA_Calculator from "./pages/HRA_Calculator";
+import LeaveEncashmentCalculator from "./pages/LeaveEncashmentCalculator";
+import TDSCalculatorPage from "./pages/TDSCalculatorPage";
+import TCSCalculatorPage from "./pages/TCSCalculatorPage";
+import PartnerRemunerationCalculator from "./pages/PartnerRemunerationCalculator";
+import AMT_MAT_Calculator from "./pages/AMT_MAT_Calculator";
+import CapitalGainExemptionCalculator from "./pages/CapitalGainExemptionCalculator";
+import PeriodOfHoldingCalculator from "./pages/PeriodOfHoldingCalculator";
+import NSC_Calculator from "./pages/NSC_Calculator";
+import Section80G80GGC80GGBCalculator from "./pages/Section80G80GGC80GGBCalculator";
+import SurchargeMarginalReliefCalculatorStatusWise from "./pages/SurchargeMarginalReliefCalculatorStatusWise";
+import SurchargeMarginalReliefIndividual from "./pages/SurchargeMarginalReliefIndividual";
+import SurchargeMarginalReliefAOPCompany from "./pages/SurchargeMarginalReliefAOPCompany";
+import SurchargeMarginalReliefFirmLLPLocal from "./pages/SurchargeMarginalReliefFirmLLPLocal";
+import SurchargeMarginalReliefCompany from "./pages/SurchargeMarginalReliefCompany";
+import SurchargeMarginalReliefCooperative from "./pages/SurchargeMarginalReliefCooperative";
+import Section234CCalculatorAY2026_27 from "./pages/Section234CCalculatorAY2026_27";
+import TaxableGratuityCalculator from "./pages/TaxableGratuityCalculator";
+import Section89ReliefCalculator from "./pages/Section89ReliefCalculator";
+import AdvanceTaxCalculatorAY2027_28 from "./pages/AdvanceTaxCalculatorAY2027_28";
+
+// Forms and Information
+import FormsPage from "./pages/FormsPage";
+import IncomeTaxReturnsPage from "./pages/IncomeTaxReturnsPage";
+import IncomeTaxForms2026Page from "./pages/IncomeTaxForms2026Page";
+import HelpPage from "./pages/HelpPage";
+import IncomeTaxAct2025Page from "./pages/IncomeTaxAct2025Page";
+import IncomeTaxAct1961Page from "./pages/IncomeTaxAct1961Page";
+import ComparisonPage from "./pages/ComparisonPage";
+import NotFoundPage from "./pages/NotFoundPage";
+
+export default function App() {
+  return (
+    <>
+      <ScrollToTop />
+
+      <Routes>
+        <Route path="/" element={<Layout />}>
+
+          {/* Main Pages */}
+          <Route index element={<HomePage />} />
+          <Route path="about" element={<AboutPage />} />
+          <Route path="acts-laws" element={<ActsLawsPage />} />
+
+          {/* UI Components Showcase */}
+          <Route
+            path="ui-components"
+            element={<UIComponentsPage />}
+          />
+
+          {/* Knowledge Base */}
+          <Route
+            path="business-code-list"
+            element={<BusinessCodeListPage />}
+          />
+
+          <Route
+            path="FinancialRatiosDisclosure"
+            element={<FinancialRatiosDisclosure />}
+          />
+
+          <Route
+            path="formsMapping"
+            element={<FormsMappingPage />}
+          />
+
+          <Route
+            path="tds-rate-chart"
+            element={<TDSRateChartPage />}
+          />
+
+          <Route
+            path="tcs-rate-chart"
+            element={<TCSRateChartPage />}
+          />
+
+          <Route
+            path="AOP_Tax_Treatment_Situations"
+            element={<AOP_Tax_Treatment_Situations />}
+          />
+
+          <Route
+            path="form_10IEANotes"
+            element={<Form_10IEANotes />}
+          />
+
+          <Route
+            path="Tax_Calendar"
+            element={<Tax_Calendar />}
+          />
+
+          <Route
+            path="E-Tutorial"
+            element={<E_Tutorial />}
+          />
+
+          {/* Tax Calculators */}
+          <Route
+            path="AdvanceTaxCalculator"
+            element={<AdvanceTaxCalculator />}
+          />
+
+          <Route
+            path="HRA_Calculator"
+            element={<HRA_Calculator />}
+          />
+
+          <Route
+            path="LeaveEncashmentCalculator"
+            element={<LeaveEncashmentCalculator />}
+          />
+
+          <Route
+            path="tax-calculator"
+            element={<TaxCalculatorPage />}
+          />
+
+          <Route
+            path="tds-calculator"
+            element={<TDSCalculatorPage />}
+          />
+
+          <Route
+            path="tcs-calculator"
+            element={<TCSCalculatorPage />}
+          />
+
+          <Route
+            path="partner-remuneration-calculator"
+            element={<PartnerRemunerationCalculator />}
+          />
+
+          <Route
+            path="AMT_MAT_Calculator"
+            element={<AMT_MAT_Calculator />}
+          />
+
+          <Route
+            path="CapitalGainExemptionCalculator"
+            element={<CapitalGainExemptionCalculator />}
+          />
+
+          <Route
+            path="PeriodOfHoldingCalculator"
+            element={<PeriodOfHoldingCalculator />}
+          />
+
+          <Route
+            path="NSC_Calculator"
+            element={<NSC_Calculator />}
+          />
+
+          <Route
+            path="Section80G80GGC80GGBCalculator"
+            element={<Section80G80GGC80GGBCalculator />}
+          />
+
+          <Route
+            path="SurchargeMarginalReliefCalculatorStatusWise"
+            element={<SurchargeMarginalReliefCalculatorStatusWise />}
+          />
+
+          <Route
+            path="SurchargeMarginalReliefCalculator/individual"
+            element={<SurchargeMarginalReliefIndividual />}
+          />
+
+          <Route
+            path="SurchargeMarginalReliefCalculator/aop-company"
+            element={<SurchargeMarginalReliefAOPCompany />}
+          />
+
+          <Route
+            path="SurchargeMarginalReliefCalculator/firm-llp-local"
+            element={<SurchargeMarginalReliefFirmLLPLocal />}
+          />
+
+          <Route
+            path="SurchargeMarginalReliefCalculator/company"
+            element={<SurchargeMarginalReliefCompany />}
+          />
+
+          <Route
+            path="SurchargeMarginalReliefCalculator/cooperative"
+            element={<SurchargeMarginalReliefCooperative />}
+          />
+
+          <Route
+            path="Section234CCalculatorAY2026_27"
+            element={<Section234CCalculatorAY2026_27 />}
+          />
+
+          <Route
+            path="taxable-gratuity-calculator"
+            element={<TaxableGratuityCalculator />}
+          />
+
+          <Route
+            path="Section89ReliefCalculator"
+            element={<Section89ReliefCalculator />}
+          />
+
+          <Route
+            path="AdvanceTaxCalculatorAY2027_28"
+            element={<AdvanceTaxCalculatorAY2027_28 />}
+          />
+
+          {/* Forms */}
+          <Route path="forms" element={<FormsPage />} />
+
+          <Route
+            path="forms/income-tax-returns"
+            element={<IncomeTaxReturnsPage />}
+          />
+
+          <Route
+            path="forms/income-tax-forms-2026"
+            element={<IncomeTaxForms2026Page />}
+          />
+
+          {/* Help */}
+          <Route path="help" element={<HelpPage />} />
+
+          {/* Income Tax Acts */}
+          <Route
+            path="acts-laws/income-tax-act-2025"
+            element={<IncomeTaxAct2025Page />}
+          />
+
+          <Route
+            path="acts-laws/income-tax-act-1961"
+            element={<IncomeTaxAct1961Page />}
+          />
+
+          <Route
+            path="acts-laws/comparison-2025-vs-1961"
+            element={<ComparisonPage />}
+          />
+
+          {/* 404 */}
+          <Route path="*" element={<NotFoundPage />} />
+
+        </Route>
+      </Routes>
+    </>
+  );
+}

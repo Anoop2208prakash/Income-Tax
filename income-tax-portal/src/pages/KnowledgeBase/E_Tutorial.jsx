@@ -1,0 +1,150 @@
+
+import Breadcrumb from "../../components/Breadcrumb";
+import SectionHeader from "../../components/SectionHeader";
+import CalculatorCard from "../../components/CalculatorCard";
+import { useNavigate } from "react-router-dom";
+
+export default function E_Tutorial() {
+  const navigate = useNavigate();
+
+   const calculatorItems = [
+    {
+      title: "Business Code List",
+      description:
+        "View the complete list of business codes and their related details.",
+      badge: "Reference",
+      onClick: () => navigate("/business-code-list"),
+    },
+    {
+      title: "Forms name as per Income Tax Act 2025 ",
+      description:
+      "Old and new Income Tax Forms with their corresponding form names under the 1961 and 2025 Acts.",
+      badge: "Reference",
+      onClick: () => navigate("/formsMapping"),
+    },
+    {
+      title: "TDS Rate Chart",
+      description:
+        "TDS rates, applicable sections, threshold limits, and special provisions for different types of payments and deductees.",
+      badge: "Reference",
+      onClick: () => navigate("/tds-rate-chart"),
+    },
+    {
+      title: "TCS Rate Chart",
+      description:
+        "TCS rates, applicable sections, threshold limits, and special provisions for different types of payments and deductees.",
+      badge: "Reference",
+      onClick: () => navigate("/tcs-rate-chart"),
+    },
+    {
+      title: "AOP Tax Treatment – Situations",
+      description:
+        "Taxability of an AOP is determined based on its status, members’ share in income, and applicable provisions of the Income-tax Act.",
+      badge: "Reference",
+      onClick: () => navigate("/AOP_Tax_Treatment_Situations"),
+    },
+    {
+      title: "Form 10IEA filing Notes",
+      description:
+        "Form 10-IEA is filed by eligible taxpayers to exercise or withdraw the option for taxation under the old tax regime, as applicable under the Income-tax Act.",
+      badge: "Reference",
+      onClick: () => navigate("/Form_10IEANotes"),
+    },
+    {
+      title: "Tax Calendar",
+      description:
+       "A tax calendar provides a concise overview of important tax-related due dates, filing deadlines, and compliance requirements.",
+      badge: "Reference",
+      onClick: () => navigate("/Tax_Calendar"),
+    },
+    {
+      title: "Financial Ratios Disclosure",
+      description:
+       "A standard format for the mandatory financial ratios under Schedule III of the Companies Act, 2013. It provides the accurate numerator and denominator mapping for ratios like Current Ratio, Debt-Equity, ROE, and Turnover Ratios, which can be included directly in the Notes to Accounts of Financial Statements.",
+      badge: "Reference",
+      onClick: () => navigate("/FinancialRatiosDisclosure"),
+    }
+   ];
+
+   return (
+    <>
+      <style>{`
+          #header {
+          margin: 40px;
+          }
+        
+        .tax-calculator-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 24px;
+          align-items: stretch;
+          width: 100%;
+        }
+
+        .tax-calculator-grid > * {
+          min-width: 0;
+          height: 100%;
+          align-self: stretch;
+        }
+
+        .tax-calculator-grid .calculator-card-link {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-self: stretch;
+        }
+
+        @media (max-width: 1024px) {
+          .tax-calculator-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 640px) {
+          .tax-calculator-grid {
+            grid-template-columns: 1fr;
+            gap: 18px;
+          }
+        }
+      `}</style>
+
+      <Breadcrumb current="KnowledgeBase" />
+
+      <section className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-10">
+        <div className="max-w-7xl mx-auto px-4">
+
+          {/* Main Calculator Container */}
+          <div id="header"
+            className="
+              bg-white
+              rounded-[32px]
+              shadow-xl
+              border border-gray-100
+              mx-2 sm:mx-4 lg:mx-8
+              p-5 sm:p-7 lg:p-10
+            "
+          >
+            <SectionHeader
+              
+              title="Tax KnowledgeBase"
+              
+            />
+
+            <div className="tax-calculator-grid mt-8">
+              {calculatorItems.map((item) => (
+                <CalculatorCard
+                  key={item.title}
+                  title={item.title}
+                  description={item.description}
+                  badge={item.badge}
+                  onClick={item.onClick}
+                />
+              ))}
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </>
+  );
+}
